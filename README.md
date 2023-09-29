@@ -1,18 +1,18 @@
-[![CI](https://github.com/org-arl/PDUs.jl/workflows/CI/badge.svg)](https://github.com/org-arl/PDUs.jl/actions)
-[![doc-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://org-arl.github.io/PDUs.jl/stable)
-[![doc-dev](https://img.shields.io/badge/docs-latest-blue.svg)](https://org-arl.github.io/PDUs.jl/dev)
+[![CI](https://github.com/org-arl/ProtocolDataUnits.jl/workflows/CI/badge.svg)](https://github.com/org-arl/ProtocolDataUnits.jl/actions)
+[![doc-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://org-arl.github.io/ProtocolDataUnits.jl/stable)
+[![doc-dev](https://img.shields.io/badge/docs-latest-blue.svg)](https://org-arl.github.io/ProtocolDataUnits.jl/dev)
 
-# PDUs.jl
+# ProtocolDataUnits.jl
 **Encoders and decoders for Protocol Data Units (PDUs)**
 
-[PDUs](https://en.wikipedia.org/wiki/Protocol_data_unit) encode information as byte streams that can be transmitted across a network or stored. `PDUs.jl` simplifies the process of encoding and decoding information as PDUs in a declarative way.
+[PDUs](https://en.wikipedia.org/wiki/Protocol_data_unit) encode information as byte streams that can be transmitted across a network or stored. `ProtocolDataUnits.jl` simplifies the process of encoding and decoding information as PDUs in a declarative way.
 
 ## Illustrative Example
 
 The usage of the package is best illustrated with a simple example:
 
 ```julia
-using PDUs
+using ProtocolDataUnits
 
 # define PDU format
 Base.@kwdef struct EthernetFrame <: PDU
@@ -24,7 +24,7 @@ Base.@kwdef struct EthernetFrame <: PDU
 end
 
 # declare that the variable length of the payload can be computed
-PDUs.length(::Type{EthernetFrame}, ::Val{:payload}, info) = info.length - 18
+Base.length(::Type{EthernetFrame}, ::Val{:payload}, info) = info.length - 18
 
 # create an Ethernet frame
 frame = EthernetFrame(
@@ -44,8 +44,8 @@ decoded = EthernetFrame(bytes)
 @assert frame == decoded
 ```
 
-The package can do much more, including nested PDUs, wire-encoding, CRC computation, etc. For more information, read the [documentation](https://org-arl.github.io/PDUs.jl/stable).
+The package can do much more, including nested PDUs, wire-encoding, CRC computation, etc. For more information, read the [documentation](https://org-arl.github.io/ProtocolDataUnits.jl/stable).
 
 ## Relationship with Other Packages
 
-[ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl) implements the [Protocol Buffers](https://protobuf.dev) specification for encoding/decoding data structures into byte streams. While the functionality sounds similar with `PDUs.jl`, both serve very different needs. Protocol Buffers provide a great way to encode information in a well-defined way but do not provide the flexibility to declare the format of the encoded information. On the other hand, `PDUs.jl` allows the developer to declare the byte stream format (typically based on networking specifications), and encode/decode the byte streams into structures.
+[ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl) implements the [Protocol Buffers](https://protobuf.dev) specification for encoding/decoding data structures into byte streams. While the functionality sounds similar with `ProtocolDataUnits.jl`, both serve very different needs. Protocol Buffers provide a great way to encode information in a well-defined way but do not provide the flexibility to declare the format of the encoded information. On the other hand, `ProtocolDataUnits.jl` allows the developer to declare the byte stream format (typically based on networking specifications), and encode/decode the byte streams into structures.

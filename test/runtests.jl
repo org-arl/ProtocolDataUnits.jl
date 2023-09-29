@@ -1,5 +1,5 @@
 using Test
-using PDUs
+using ProtocolDataUnits
 
 @testset "basic" begin
 
@@ -33,7 +33,7 @@ using PDUs
   @test f1 == f2
   @test length(buf) == 20 + 255
 
-  PDUs.length(::Type{Eth2}, ::Val{:payload}, info) = info.length - 18
+  Base.length(::Type{Eth2}, ::Val{:payload}, info) = info.length - 18
 
   f1 = Eth2()
   buf = Vector{UInt8}(f1)
@@ -43,7 +43,7 @@ using PDUs
   @test length(buf) == 18
   @test buf == [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x08, 0x00, 0xde, 0xad, 0xbe, 0xef]
 
-  PDUs.byteorder(::Type{Eth2}) = LITTLE_ENDIAN
+  ProtocolDataUnits.byteorder(::Type{Eth2}) = LITTLE_ENDIAN
 
   f1 = Eth2()
   buf = Vector{UInt8}(f1)
@@ -84,7 +84,7 @@ end
   @test length(buf) == 7
   @test buf == [0x12, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
 
-  PDUs.length(::Type{TestPDU}, ::Val{:s}, info) = info.length - 1
+  Base.length(::Type{TestPDU}, ::Val{:s}, info) = info.length - 1
 
   f1 = TestPDU(0x12, "hello")
   buf = Vector{UInt8}(f1)
@@ -94,7 +94,7 @@ end
   @test length(buf) == 6
   @test buf == [0x12, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
 
-  PDUs.length(::Type{TestPDU}, ::Val{:s}, info) = info.get(:n)
+  Base.length(::Type{TestPDU}, ::Val{:s}, info) = info.get(:n)
 
   f1 = TestPDU(0x07, "hello")
   buf = Vector{UInt8}(f1)
@@ -133,7 +133,7 @@ end
   @test length(buf) == 10
   @test buf == [0x56, 0x78, 0x12, 0x34, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
 
-  PDUs.length(::Type{InnerPDU}, ::Val{:b}, info) = info.get(:a)
+  Base.length(::Type{InnerPDU}, ::Val{:b}, info) = info.get(:a)
 
   f1in = InnerPDU(0x05, "hello")
   f1 = OuterPDU(0x5678, f1in)
@@ -146,8 +146,8 @@ end
   @test length(buf) == 9
   @test buf == [0x56, 0x78, 0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
 
-  PDUs.length(::Type{InnerPDU}, ::Val{:b}, info) = info.length - 2
-  PDUs.length(::Type{OuterPDU}, ::Val{:inner}, info) = info.length - 2
+  Base.length(::Type{InnerPDU}, ::Val{:b}, info) = info.length - 2
+  Base.length(::Type{OuterPDU}, ::Val{:inner}, info) = info.length - 2
 
   f1in = InnerPDU(0x1234, "hello")
   f1 = OuterPDU(0x5678, f1in)

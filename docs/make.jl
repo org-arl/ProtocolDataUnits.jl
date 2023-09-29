@@ -1,19 +1,15 @@
 using Documenter
 
 push!(LOAD_PATH,"../src/")
-using PDUs
+using ProtocolDataUnits
 
 makedocs(
-  sitename = "PDUs.jl",
-  format = Documenter.HTML(prettyurls = false),
-  linkcheck = !("skiplinks" in ARGS),
-  pages = Any[
-    "Home" => "index.md",
-  ]
+  sitename = "ProtocolDataUnits.jl",
+  format = Documenter.HTML(prettyurls = false)
 )
 
 deploydocs(
-  repo = "github.com/org-arl/PDUs.jl.git",
+  repo = "github.com/org-arl/ProtocolDataUnits.jl.git",
   branch = "gh-pages",
   devbranch = "master",
   devurl = "dev",

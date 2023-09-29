@@ -1,7 +1,7 @@
-# PDUs.jl
+# ProtocolDataUnits.jl
 
 ```@meta
-CurrentModule = PDUs
+CurrentModule = ProtocolDataUnits
 ```
 
 TODO

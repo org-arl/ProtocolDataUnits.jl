@@ -1,4 +1,4 @@
-name = "PDUs"
+name = "ProtocolDataUnits"
 uuid = "07db6e9f-91ad-4fbd-9fd8-5722e51e9a72"
 authors = ["Mandar Chitre <mandar@nus.edu.sg>"]
 version = "0.1.0"

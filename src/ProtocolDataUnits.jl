@@ -1,4 +1,4 @@
-module PDUs
+module ProtocolDataUnits
 
 export PDU, BIG_ENDIAN, LITTLE_ENDIAN
 
@@ -53,7 +53,7 @@ order, define a method for this function.
 
 # Example:
 ```
-PDUs.byteorder(::Type{MyPDU}) = LITTLE_ENDIAN
+ProtocolDataUnits.byteorder(::Type{MyPDU}) = LITTLE_ENDIAN
 ```
 """
 byteorder(::Type{<:PDU}) = BIG_ENDIAN
@@ -66,7 +66,7 @@ order as the PDU. To change byte order, define a method for this function.
 
 # Example:
 ```
-PDUs.byteorder(::Type{MyPDU}, ::Val{:myfield}) = LITTLE_ENDIAN
+ProtocolDataUnits.byteorder(::Type{MyPDU}, ::Val{:myfield}) = LITTLE_ENDIAN
 ```
 """
 byteorder(T::Type{<:PDU}, fld) = byteorder(T)
@@ -82,10 +82,10 @@ for strings.
 # Examples:
 ```
 # length of field x is 4 bytes less than length of PDU
-PDUs.length(::Type{MyPDU}, ::Val{:x}, info) = info.length - 4
+Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.length - 4
 
 # length of field x is given by the value of field n in the PDU
-PDUs.length(::Type{MyPDU}, ::Val{:x}, info) = info.get(:n)
+Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.get(:n)
 ```
 """
 Base.length(T::Type{<:PDU}, V::Val, info) = nothing
