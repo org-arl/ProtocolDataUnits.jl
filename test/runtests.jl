@@ -67,6 +67,10 @@ using PDUs
   @test f1 == f2
   @test length(buf) == 18 + 255
 
+end
+
+@testset "strings" begin
+
   struct TestPDU <: PDU
     n::UInt8
     s::String
@@ -103,5 +107,57 @@ using PDUs
   f2 = read(IOBuffer(buf), TestPDU)
 
   @test f1 == f2
+
+end
+
+@testset "nested" begin
+
+  struct InnerPDU <: PDU
+    a::UInt16
+    b::String
+  end
+
+  struct OuterPDU <: PDU
+    n::UInt16
+    inner::InnerPDU
+  end
+
+  f1in = InnerPDU(0x1234, "hello")
+  f1 = OuterPDU(0x5678, f1in)
+  buf = Vector{UInt8}(f1)
+  f2 = OuterPDU(buf)
+
+  @test f1.n == f2.n
+  @test f1.inner == f2.inner
+  @test f1 == f2
+  @test length(buf) == 10
+  @test buf == [0x56, 0x78, 0x12, 0x34, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
+
+  PDUs.length(::Type{InnerPDU}, ::Val{:b}, info) = info.get(:a)
+
+  f1in = InnerPDU(0x05, "hello")
+  f1 = OuterPDU(0x5678, f1in)
+  buf = Vector{UInt8}(f1)
+  f2 = OuterPDU(buf)
+
+  @test f1.n == f2.n
+  @test f1.inner == f2.inner
+  @test f1 == f2
+  @test length(buf) == 9
+  @test buf == [0x56, 0x78, 0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
+
+  PDUs.length(::Type{InnerPDU}, ::Val{:b}, info) = info.length - 2
+  PDUs.length(::Type{OuterPDU}, ::Val{:inner}, info) = info.length - 2
+
+  f1in = InnerPDU(0x1234, "hello")
+  f1 = OuterPDU(0x5678, f1in)
+  buf = Vector{UInt8}(f1)
+  f2 = OuterPDU(buf)
+
+  @test f1.n == f2.n
+  @test f1.inner == f2.inner
+  @test f1 == f2
+  @test length(buf) == 9
+  @test buf == [0x56, 0x78, 0x12, 0x34, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
 
 end

@@ -174,7 +174,8 @@ function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing)
       v = n === nothing ? varread(io, V) : V[read(io, V) for _ ∈ 1:n]
       push!(data, f => F <: AbstractString ? strip(String(v), ['\0']) : ptoh.(v))
     else
-      push!(data, f => read(io, F))
+      n = length(T, Val(f), PDUInfo(nbytes, s -> lookup(data, s)))
+      push!(data, f => read(io, F; nbytes=something(n, missing)))
     end
   end
   T(map(kv -> kv[2], data)...)
