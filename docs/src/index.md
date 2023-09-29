@@ -269,3 +269,82 @@ pdu2 = OuterPDU2(bytes)
 @assert pdu2.y == pdu.y
 @assert pdu == pdu2
 ```
+
+## PDUs with dependent fields
+
+A PDU may contain a field that is dependent on another field. We saw in an
+example above, where `MyVectorPDU` has field `a` which specified the number
+of elements in field `b`. A good way to ensure consistency is to populate
+dependent fields at construction:
+```julia
+struct MyVectorPDU2 <: PDU
+  a::Int16
+  b::Vector{Float64}
+end
+
+MyVectorPDU2(b::Vector{Float64}) = MyVectorPDU2(length(b), b)
+
+pdu = MyVectorPDU2([1.0, 2.0, 3.0])
+@assert pdu.a == 3
+```
+
+However, since vector `b` can be mutated after construction, the consistency
+at construction does not guarantee consistency at encoding. We could enforce
+consistency an encoding using a pre-encode hook:
+```julia
+using Accessors
+
+function ProtocolDataUnits.preencode(pdu::MyVectorPDU2)
+  @set pdu.a = length(pdu.b)
+end
+```
+This will ensure that field `a` is populated correctly at time of encoding:
+```julia
+push!(pdu.b, 4.0)           # add 4th element to b
+@assert pdu.a == 3          # now pdu is inconsistent, since pdu.a == 3
+
+bytes = Vector{UInt8}(pdu)
+@assert bytes[2] == 4       # encoded bytes show 4 elements correctly
+
+pdu2 = MyVectorPDU2(bytes)
+@assert pdu2.a == 4         # decoded pdu also shows 4 elements correctly
+@assert length(pdu2.b) == 4 # and it indeed contains 4 elements
+```
+
+## PDUs with CRCs
+
+Sometimes we may want to pre-process PDUs to compute CRC, or post-process them to
+modify their content or perform CRC checks. To see, how we can do this, let's go
+back to our example of `EthernetFrame` and define a pre-encoding hook to compute
+CRC, and a post-decoding hook to check the CRC:
+```julia
+using CRC32
+
+function ProtocolDataUnits.preencode(pdu::EthernetFrame)
+  bytes = Vector{UInt8}(pdu; hooks=false)   # encode without computing CRC
+  crc = crc32(bytes[1:end-4])               # compute CRC
+  @set pdu.crc = crc                        # make a new frame with CRC filled in
+end
+
+function ProtocolDataUnits.postdecode(pdu::EthernetFrame)
+  bytes = Vector{UInt8}(pdu; hooks=false)   # re-encode the frame for CRC computation
+  pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
+  pdu                                       # return unaltered pdu if CRC OK
+end
+
+frame = EthernetFrame(
+  dstaddr = (0x01, 0x02, 0x03, 0x04, 0x05, 0x06),
+  srcaddr = (0x11, 0x12, 0x13, 0x14, 0x15, 0x16),
+  ethtype = 0x0800,
+  payload = [0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14]
+)
+
+buf = Vector{UInt8}(frame)
+frame2 = EthernetFrame(buf)
+@assert frame.payload == frame2.payload
+```
+However, if there was an error in the buffer, the CRC check would fail:
+```julia
+buf[5] += 1
+EthernetFrame(buf)      # should throw an exception
+```

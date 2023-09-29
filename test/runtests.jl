@@ -1,5 +1,7 @@
 using Test
 using ProtocolDataUnits
+using Accessors
+using CRC32
 
 @testset "basic" begin
 
@@ -162,6 +164,36 @@ end
 
 end
 
+@testset "hooks" begin
+
+  struct ChecksumPDU <: PDU
+    a::NTuple{16,UInt64}
+    crc::UInt32
+  end
+
+  function ProtocolDataUnits.preencode(pdu::ChecksumPDU)
+    bytes = Vector{UInt8}(pdu; hooks=false)
+    crc = crc32(bytes[1:end-4])
+    @set pdu.crc = crc
+  end
+
+  function ProtocolDataUnits.postdecode(pdu::ChecksumPDU)
+    bytes = Vector{UInt8}(pdu; hooks=false)
+    pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
+    pdu
+  end
+
+  f1 = ChecksumPDU((1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), 0xdeadbeef)
+  buf = Vector{UInt8}(f1)
+  f2 = ChecksumPDU(buf)
+  @test f1.a == f2.a
+  @test f2.crc != 0xdeadbeef
+
+  buf[5] += 1
+  @test_throws ErrorException ChecksumPDU(buf)
+
+end
+
 @testset "docs" begin
 
   Base.@kwdef struct EthernetFrame <: PDU
@@ -320,5 +352,55 @@ end
 
   @test pdu2.y == pdu.y
   @test pdu == pdu2
+
+  struct MyVectorPDU2 <: PDU
+    a::Int16
+    b::Vector{Float64}
+  end
+
+  MyVectorPDU2(b::Vector{Float64}) = MyVectorPDU2(length(b), b)
+
+  pdu = MyVectorPDU2([1.0, 2.0, 3.0])
+  @test pdu.a == 3
+
+  function ProtocolDataUnits.preencode(pdu::MyVectorPDU2)
+    @set pdu.a = length(pdu.b)
+  end
+
+  push!(pdu.b, 4.0)
+  @test pdu.a == 3
+
+  bytes = Vector{UInt8}(pdu)
+  @test bytes[2] == 4
+
+  pdu2 = MyVectorPDU2(bytes)
+  @test pdu2.a == 4
+  @test length(pdu2.b) == 4
+
+  function ProtocolDataUnits.preencode(pdu::EthernetFrame)
+    bytes = Vector{UInt8}(pdu; hooks=false)
+    crc = crc32(bytes[1:end-4])
+    @set pdu.crc = crc
+  end
+
+  function ProtocolDataUnits.postdecode(pdu::EthernetFrame)
+    bytes = Vector{UInt8}(pdu; hooks=false)
+    pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
+    pdu
+  end
+
+  frame = EthernetFrame(
+    dstaddr = (0x01, 0x02, 0x03, 0x04, 0x05, 0x06),
+    srcaddr = (0x11, 0x12, 0x13, 0x14, 0x15, 0x16),
+    ethtype = 0x0800,
+    payload = [0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14]
+  )
+
+  buf = Vector{UInt8}(frame)
+  frame2 = EthernetFrame(buf)
+  @test frame.payload == frame2.payload
+
+  buf[5] += 1
+  @test_throws ErrorException EthernetFrame(buf)
 
 end

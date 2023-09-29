@@ -90,17 +90,61 @@ Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.get(:n)
 """
 Base.length(T::Type{<:PDU}, V::Val, info) = nothing
 
+"""
+    preencode(pdu::PDU)
+
+Pre-encode hook. This function is called before encoding a PDU into a vector
+of bytes. It may return a new PDU, which is then encoded instead of the original PDU.
+The pre-encode hook should not change the type of the PDU.
+
+# Example:
+```julia
+using Accessors, CRC32
+
+# assumes MyPDU has field crc::UInt32 as the last field
+function ProtocolDataUnits.preencode(pdu::MyPDU)
+  bytes = Vector{UInt8}(pdu; hooks=false)
+  crc = crc32(bytes[1:end-4])
+  @set pdu.crc = crc
+end
+```
+"""
+preencode(pdu::PDU) = pdu
+
+"""
+    postdecode(pdu::PDU)
+
+Post-decode hook. This function is called after decoding a PDU from a vector
+of bytes. It may return a new PDU, which is then returned instead of the original PDU.
+The post-decode hook should not change the type of the PDU. The post-decode hook
+may also be used to validate the PDU, and throw an error if the PDU is invalid.
+
+# Example:
+```julia
+using CRC32
+
+# assumes MyPDU has field crc::UInt32 as the last field
+function ProtocolDataUnits.postdecode(pdu::MyPDU)
+  bytes = Vector{UInt8}(pdu; hooks=false)
+  pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
+  pdu
+end
+```
+"""
+postdecode(pdu::PDU) = pdu
+
 ## API
 
 """
-    Vector{UInt8}(pdu::PDU)
+    Vector{UInt8}(pdu::PDU; hooks=true)
 
-Encodes a PDU into a vector of bytes.
+Encodes a PDU into a vector of bytes. If `hooks` is `true`, the pre-encode hook
+is called before encoding the PDU.
 """
-function Vector{UInt8}(pdu::PDU)
+function Vector{UInt8}(pdu::PDU; hooks=true)
   io = IOBuffer()
   try
-    write(io, pdu)
+    write(io, pdu; hooks)
     take!(io)
   finally
     close(io)
@@ -108,11 +152,13 @@ function Vector{UInt8}(pdu::PDU)
 end
 
 """
-    write(io::IO, pdu::PDU)
+    write(io::IO, pdu::PDU; hooks=true)
 
-Encodes a PDU into a vector of bytes written to stream `io`.
+Encodes a PDU into a vector of bytes written to stream `io`. If `hooks` is `true`,
+the pre-encode hook is called before encoding the PDU.
 """
-function Base.write(io::IO, pdu::T) where {T<:PDU}
+function Base.write(io::IO, pdu::T; hooks=true) where {T<:PDU}
+  hooks && (pdu = preencode(pdu))
   for (f, F) ∈ zip(fieldnames(T), fieldtypes(T))
     htop = byteorder(T, Val(f))[1]
     if F <: Number
@@ -140,11 +186,12 @@ function Base.write(io::IO, pdu::T) where {T<:PDU}
 end
 
 """
-    (T::Type{<:PDU})(buf::Vector{UInt8})
+    (T::Type{<:PDU})(buf::Vector{UInt8}; hooks=true)
 
-Decodes a vector of bytes to give a PDU.
+Decodes a vector of bytes to give a PDU. If `hooks` is `true`, the post-decode hook
+is called after decoding the PDU.
 """
-function (T::Type{<:PDU})(buf::Vector{UInt8})
+function (T::Type{<:PDU})(buf::Vector{UInt8}; hooks=true)
   io = IOBuffer(buf)
   try
     read(io, T; nbytes=length(buf))
@@ -154,13 +201,14 @@ function (T::Type{<:PDU})(buf::Vector{UInt8})
 end
 
 """
-    read(io::IO, T::PDU)
-    read(io::IO, T::PDU; nbytes)
+    read(io::IO, T::PDU; hooks=true)
+    read(io::IO, T::PDU; nbytes, hooks=true)
 
 Decodes a vector of bytes from stream `io` to give a PDU. If `nbytes` is specified,
-the PDU is assumed to be of length `nbytes` bytes.
+the PDU is assumed to be of length `nbytes` bytes. If `hooks` is `true`, the
+post-decode hook is called after decoding the PDU.
 """
-function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing)
+function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing, hooks=true)
   data = Pair{Symbol,Any}[]
   for (f, F) ∈ zip(fieldnames(T), fieldtypes(T))
     ptoh = byteorder(T, Val(f))[2]
@@ -178,7 +226,9 @@ function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing)
       push!(data, f => read(io, F; nbytes=something(n, missing)))
     end
   end
-  T(map(kv -> kv[2], data)...)
+  pdu = T(map(kv -> kv[2], data)...)
+  hooks && (pdu = postdecode(pdu))
+  pdu
 end
 
 ## private helpers

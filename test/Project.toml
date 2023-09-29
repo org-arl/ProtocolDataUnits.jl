@@ -1,2 +1,4 @@
 [deps]
+Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
+CRC32 = "b4567568-9dcc-467e-9b62-c342d3a501d3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

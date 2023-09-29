@@ -8,4 +8,6 @@ ProtocolDataUnits.PDUInfo
 Base.read(io::IO, ::Type{<:PDU})
 Base.write(io::IO, ::PDU)
 Base.Vector{UInt8}(::PDU)
+ProtocolDataUnits.preencode
+ProtocolDataUnits.postdecode
 ```
