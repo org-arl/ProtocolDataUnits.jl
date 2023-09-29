@@ -63,7 +63,7 @@ pdu2 = MyLessSimplePDU(bytes)
 
 pdu2 = MyLessSimplePDU(bytes)
 @assert pdu2.b == &quot;hello world! how are you?&quot;
-@assert pdu2 == pdu</code></pre><p>We can also define field lengths that depend on the value of preceding fields. For example, if we happened to know that the length of string <code>b</code> is always <code>2a</code>, we can declare:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 2 * info.get(:a)</code></pre><p>Here <code>info.get()</code> provides us access to fields that are decoded earlier in the byte stream.</p><pre><code class="language-julia hljs">pdu = MyLessSimplePDU(6, &quot;hello world!&quot;)
+@assert pdu == pdu2</code></pre><p>We can also define field lengths that depend on the value of preceding fields. For example, if we happened to know that the length of string <code>b</code> is always <code>2a</code>, we can declare:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 2 * info.get(:a)</code></pre><p>Here <code>info.get()</code> provides us access to fields that are decoded earlier in the byte stream.</p><pre><code class="language-julia hljs">pdu = MyLessSimplePDU(6, &quot;hello world!&quot;)
 
 bytes = Vector{UInt8}(pdu)
 @assert length(bytes) == 2 + 2*6
@@ -93,7 +93,7 @@ pdu = MyVectorPDU(1, [1.0, 2.0, 3.0])
 bytes = Vector{UInt8}(pdu)
 @assert length(bytes) == 2 + 3 * sizeof(Float64)
 pdu2 = MyVectorPDU(bytes)
-@assert pdu2 == pdu</code></pre><h2 id="PDUs-with-nested-PDUs"><a class="docs-heading-anchor" href="#PDUs-with-nested-PDUs">PDUs with nested PDUs</a><a id="PDUs-with-nested-PDUs-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-nested-PDUs" title="Permalink"></a></h2><p>We can even nest PDUs:</p><pre><code class="language-julia hljs">struct InnerPDU &lt;: PDU
+@assert pdu == pdu2</code></pre><h2 id="PDUs-with-nested-PDUs"><a class="docs-heading-anchor" href="#PDUs-with-nested-PDUs">PDUs with nested PDUs</a><a id="PDUs-with-nested-PDUs-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-nested-PDUs" title="Permalink"></a></h2><p>We can even nest PDUs:</p><pre><code class="language-julia hljs">struct InnerPDU &lt;: PDU
   a::Int8
   b::Float32
 end
@@ -110,7 +110,7 @@ pdu = OuterPDU(1, InnerPDU(2, 3f0), 4)</code></pre><p>and encode and decode them
 pdu2 = OuterPDU(bytes)
 
 @assert pdu2.y == pdu.y   # inner PDU matches
-@assert pdu2 == pdu       # so does the outer PDU</code></pre><p>We can infer sizes of variable length fields in nested PDUs too:</p><pre><code class="language-julia hljs">struct InnerPDU2 &lt;: PDU
+@assert pdu == pdu       # so does the outer PDU2</code></pre><p>We can infer sizes of variable length fields in nested PDUs too:</p><pre><code class="language-julia hljs">struct InnerPDU2 &lt;: PDU
   a::Int8
   b::String
 end
@@ -132,4 +132,4 @@ bytes = Vector{UInt8}(pdu)
 pdu2 = OuterPDU2(bytes)
 
 @assert pdu2.y == pdu.y
-@assert pdu2 == pdu</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api.html">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Friday 29 September 2023 18:02">Friday 29 September 2023</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@assert pdu == pdu2</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api.html">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Friday 29 September 2023 18:14">Friday 29 September 2023</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
