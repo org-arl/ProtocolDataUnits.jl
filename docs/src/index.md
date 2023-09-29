@@ -164,7 +164,7 @@ bytes = Vector{UInt8}(pdu)
 
 pdu2 = MyLessSimplePDU(bytes)
 @assert pdu2.b == "hello world! how are you?"
-@assert pdu2 == pdu
+@assert pdu == pdu2
 ```
 
 We can also define field lengths that depend on the value of preceding fields. For example, if we happened to know that the length of string `b` is always `2a`, we can declare:
@@ -212,7 +212,7 @@ pdu = MyVectorPDU(1, [1.0, 2.0, 3.0])
 bytes = Vector{UInt8}(pdu)
 @assert length(bytes) == 2 + 3 * sizeof(Float64)
 pdu2 = MyVectorPDU(bytes)
-@assert pdu2 == pdu
+@assert pdu == pdu2
 ```
 
 ## PDUs with nested PDUs
@@ -240,7 +240,7 @@ bytes = Vector{UInt8}(pdu)
 pdu2 = OuterPDU(bytes)
 
 @assert pdu2.y == pdu.y   # inner PDU matches
-@assert pdu2 == pdu       # so does the outer PDU
+@assert pdu == pdu       # so does the outer PDU2
 ```
 
 We can infer sizes of variable length fields in nested PDUs too:
@@ -267,5 +267,5 @@ bytes = Vector{UInt8}(pdu)
 pdu2 = OuterPDU2(bytes)
 
 @assert pdu2.y == pdu.y
-@assert pdu2 == pdu
+@assert pdu == pdu2
 ```
