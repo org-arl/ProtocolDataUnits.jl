@@ -175,7 +175,7 @@ Encodes a PDU into a vector of bytes written to stream `io`. If `hooks` is `true
 the pre-encode hook is called before encoding the PDU.
 """
 function Base.write(io::IO, pdu::T; hooks=true) where {T<:PDU}
-  hooks && (pdu = preencode(pdu))
+  pdu = hooks ? preencode(pdu) : pdu
   info = PDUInfo(missing, s -> getfield(pdu, s))
   for f ∈ fieldnames(T)
     F = fieldtype(T, Val(f), info)
@@ -250,8 +250,7 @@ function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing, hooks=true)
     end
   end
   pdu = T(map(kv -> kv[2], data)...)
-  hooks && (pdu = postdecode(pdu))
-  pdu
+  hooks ? postdecode(pdu) : pdu
 end
 
 ## private helpers
