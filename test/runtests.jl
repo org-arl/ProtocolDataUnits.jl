@@ -531,6 +531,29 @@ end
   @test pdu.hdr isa Header_v2
   @test pdu == pdu2
 
+  struct ParamAppPDU{T} <: PDU
+    hdrlen::UInt8
+    hdr::T
+    payload::Vector{UInt8}
+  end
+
+  ParamAppPDU(hdr::Header_v1, payload) = ParamAppPDU{Header_v1}(9, hdr, payload)
+  ParamAppPDU(hdr::Header_v2, payload) = ParamAppPDU{Header_v2}(18, hdr, payload)
+
+  function ProtocolDataUnits.fieldtype(::Type{<:ParamAppPDU}, ::Val{:hdr}, info)
+    info.get(:hdrlen) == 18 && return Header_v2
+    Header_v1
+  end
+
+  Base.length(::Type{<:ParamAppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
+
+  pdu = ParamAppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
+  bytes = Vector{UInt8}(pdu)
+  @test length(bytes) == 13
+  pdu2 = ParamAppPDU(bytes)
+  @test pdu.hdr isa Header_v1
+  @test pdu == pdu2
+
   struct App2PDU <: PDU
     hdrlen::UInt8
     hdr::Union{Header_v1,Header_v2,Nothing}

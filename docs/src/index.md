@@ -400,6 +400,37 @@ pdu2 = AppPDU(bytes)
 @assert pdu == pdu2
 ```
 
+## PDUs as parametrized types
+
+For type stability, it is often desirable not to use a union type as a field in the `struct`, but instead use a parametrized `struct`. We support parametrized PDUs too:
+```julia
+struct ParamAppPDU{T} <: PDU
+  hdrlen::UInt8
+  hdr::T
+  payload::Vector{UInt8}
+end
+
+# convenience constructors to auto-populate hdrlen
+ParamAppPDU(hdr::Header_v1, payload) = ParamAppPDU{Header_v1}(9, hdr, payload)
+ParamAppPDU(hdr::Header_v2, payload) = ParamAppPDU{Header_v2}(18, hdr, payload)
+
+# hdr is v2 if hdrlen field matches it's size, otherwise default to v1
+function ProtocolDataUnits.fieldtype(::Type{<:ParamAppPDU}, ::Val{:hdr}, info)
+  info.get(:hdrlen) == 18 && return Header_v2
+  Header_v1
+end
+
+# payload length is the frame length less the header
+Base.length(::Type{<:ParamAppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
+
+pdu = ParamAppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
+bytes = Vector{UInt8}(pdu)
+@assert length(bytes) == 13
+pdu2 = ParamAppPDU(bytes)
+@assert pdu.hdr isa Header_v1
+@assert pdu == pdu2
+```
+
 ## PDUs with optional fields
 
 Extending the idea of union fields, we can define PDUs with optional fields:
