@@ -4,6 +4,7 @@
 ProtocolDataUnits.PDU
 ProtocolDataUnits.byteorder
 Base.length(::Type{<:PDU}, ::Val{Symbol}, ProtocolDataUnits.PDUInfo)
+ProtocolDataUnits.fieldtype
 ProtocolDataUnits.PDUInfo
 Base.read(io::IO, ::Type{<:PDU})
 Base.write(io::IO, ::PDU)

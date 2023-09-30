@@ -50,16 +50,20 @@ The package can do much more, including nested PDUs, wire-encoding, CRC computat
 
 A PDU is declared as a `struct` subtyped from `PDU`. It may contain fields of the following types:
 
-* Numeric types (various sized integers and floats)
-* `NTuple` of numeric types
-* `AbstractVector` of numeric types
+* `Number` types (various sized integers and floats)
+* `NTuple` of `Number` types
+* `AbstractVector` of `Number` types
 * `AbstractString`
 * Other `PDU`s
+* `Nothing`
 * Any other data type `T` that supports `read(::IO, ::Type{T})` and `write(::IO, ::T)`
+* `Union` of any of the above types
 
-The size (in bytes) of numeric types and tuples of numeric types is known. However, vectors, strings and other data types may have variable sizes. If the size is unknown, a wire-encoded size/length field is implicitly added to the PDU representation when encoding it, and is used during decoding to infer size/length. Alternatively, the size/length of specific fields may be declared by defining a `length()` for specific fields in a PDU.
+The size (in bytes) of numeric types, tuples of numeric types and `nothing` is known. However, vectors, strings and other data types may have variable sizes. If the size is unknown, a wire-encoded size/length field is implicitly added to the PDU representation when encoding it, and is used during decoding to infer size/length. Alternatively, the size/length of specific fields may be declared by defining a `length()` for specific fields in a PDU.
 
 By default, network byte order (big endian) is used for multi-byte numeric values. That may be overridden for the PDU or for specific fields by declaring a [`byteorder()`](@ref).
+
+When a field is of a union type, a `fieldtype()` definition must be available to resolve which concrete type to expect when decoding a PDU from bytes.
 
 PDUs are encoded into bytes in one of two ways:
 ```julia
@@ -272,10 +276,7 @@ pdu2 = OuterPDU2(bytes)
 
 ## PDUs with dependent fields
 
-A PDU may contain a field that is dependent on another field. We saw in an
-example above, where `MyVectorPDU` has field `a` which specified the number
-of elements in field `b`. A good way to ensure consistency is to populate
-dependent fields at construction:
+A PDU may contain a field that is dependent on another field. We saw in an example above, where `MyVectorPDU` has field `a` which specified the number of elements in field `b`. A good way to ensure consistency is to populate dependent fields at construction:
 ```julia
 struct MyVectorPDU2 <: PDU
   a::Int16
@@ -288,9 +289,7 @@ pdu = MyVectorPDU2([1.0, 2.0, 3.0])
 @assert pdu.a == 3
 ```
 
-However, since vector `b` can be mutated after construction, the consistency
-at construction does not guarantee consistency at encoding. We could enforce
-consistency an encoding using a pre-encode hook:
+However, since vector `b` can be mutated after construction, the consistency at construction does not guarantee consistency at encoding. We could enforce consistency an encoding using a pre-encode hook:
 ```julia
 using Accessors
 
@@ -313,10 +312,7 @@ pdu2 = MyVectorPDU2(bytes)
 
 ## PDUs with CRCs
 
-Sometimes we may want to pre-process PDUs to compute CRC, or post-process them to
-modify their content or perform CRC checks. To see, how we can do this, let's go
-back to our example of `EthernetFrame` and define a pre-encoding hook to compute
-CRC, and a post-decoding hook to check the CRC:
+Sometimes we may want to pre-process PDUs to compute CRC, or post-process them to modify their content or perform CRC checks. To see, how we can do this, let's go back to our example of `EthernetFrame` and define a pre-encoding hook to compute CRC, and a post-decoding hook to check the CRC:
 ```julia
 using CRC32
 
@@ -347,4 +343,106 @@ However, if there was an error in the buffer, the CRC check would fail:
 ```julia
 buf[5] += 1
 EthernetFrame(buf)      # should throw an exception
+```
+
+## PDUs with union types
+
+Consider a PDU with the first byte specifying the header length, which is followed by a header and then a payload. Two versions of headers may be used, depending on the application needs, with the header length allowing the receiver to differentiate between the two. We can define the PDU with a header field that uses a union type:
+```julia
+struct Header_v1 <: PDU
+  src::UInt32
+  dst::UInt32
+  port::UInt8
+end
+
+struct Header_v2 <: PDU
+  src::UInt64
+  dst::UInt64
+  port::UInt16
+end
+
+struct AppPDU <: PDU
+  hdrlen::UInt8
+  hdr::Union{Header_v1,Header_v2}
+  payload::Vector{UInt8}
+end
+
+# convenience constructors to auto-populate hdrlen
+AppPDU(hdr::Header_v1, payload) = AppPDU(9, hdr, payload)
+AppPDU(hdr::Header_v2, payload) = AppPDU(18, hdr, payload)
+
+# hdr is v2 if hdrlen field matches it's size, otherwise default to v1
+function ProtocolDataUnits.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
+  info.get(:hdrlen) == 18 && return Header_v2
+  Header_v1
+end
+
+# payload length is the frame length less the header
+Base.length(::Type{AppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
+```
+
+We can now create either type of PDU and decode it without having a priori knowledge of the header type:
+```julia
+# v1 header
+pdu = AppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
+bytes = Vector{UInt8}(pdu)
+@assert length(bytes) == 13
+pdu2 = AppPDU(bytes)
+@assert pdu.hdr isa Header_v1
+@assert pdu == pdu2
+
+# v2 header
+pdu = AppPDU(Header_v2(1, 2, 3), UInt8[4, 5, 6])
+bytes = Vector{UInt8}(pdu)
+@assert length(bytes) == 22
+pdu2 = AppPDU(bytes)
+@assert pdu.hdr isa Header_v2
+@assert pdu == pdu2
+```
+
+## PDUs with optional fields
+
+Extending the idea of union fields, we can define PDUs with optional fields:
+```julia
+struct App2PDU <: PDU
+  hdrlen::UInt8
+  hdr::Union{Header_v1,Header_v2,Nothing}
+  payload::Vector{UInt8}
+end
+
+# convenience constructor to auto-populate hdrlen
+function App2PDU(; hdr=nothing, payload=UInt8[])
+  hdrlen = 0
+  hdr isa Header_v1 && (hdrlen = 9)
+  hdr isa Header_v2 && (hdrlen = 18)
+  App2PDU(hdrlen, hdr, payload)
+end
+
+# hdr is v1, v2 or nothing, depending on hdrlen
+function ProtocolDataUnits.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
+  info.get(:hdrlen) == 9 && return Header_v1
+  info.get(:hdrlen) == 18 && return Header_v2
+  Nothing
+end
+
+# payload length is the frame length less the header
+Base.length(::Type{App2PDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
+```
+and work PDUs with or without headers:
+```julia
+# v1 header
+pdu = App2PDU(hdr=Header_v1(1, 2, 3), payload=UInt8[4, 5, 6])
+bytes = Vector{UInt8}(pdu)
+@assert length(bytes) == 13
+pdu2 = App2PDU(bytes)
+@assert pdu.hdr isa Header_v1
+@assert pdu == pdu2
+
+# no header
+pdu = App2PDU(payload=UInt8[4, 5, 6, 7, 8, 9])
+bytes = Vector{UInt8}(pdu)
+@assert length(bytes) == 7
+pdu2 = App2PDU(bytes)
+@assert pdu.hdr === nothing
+@assert pdu == pdu2
 ```

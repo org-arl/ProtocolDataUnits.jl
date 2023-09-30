@@ -194,6 +194,92 @@ end
 
 end
 
+@testset "nothings" begin
+
+  Base.@kwdef struct NothingPDU <: PDU
+    a::Int64
+    b::Nothing = nothing
+    c::Nothing = nothing
+    d::Float64
+  end
+
+  f1 = NothingPDU(a=1, d=2.0)
+  buf = Vector{UInt8}(f1)
+  @test length(buf) == 16
+
+  f2 = NothingPDU(buf)
+  @test f1 == f2
+
+end
+
+@testset "unions" begin
+
+  Base.@kwdef struct UnionPDU1 <: PDU
+    a::Int64 = 0
+    b::Nothing = nothing
+    c::Union{Nothing,Int64} = nothing
+    d::Float64
+  end
+
+  ProtocolDataUnits.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = Nothing
+
+  f1 = UnionPDU1(a=1, d=2.0)
+  buf = Vector{UInt8}(f1)
+  @test length(buf) == 16
+
+  f2 = UnionPDU1(buf)
+  @test f1 == f2
+
+  ProtocolDataUnits.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = info.get(:a) == 1 ? Int64 : Nothing
+
+  f1 = UnionPDU1(d=2.0)
+  buf = Vector{UInt8}(f1)
+  @test length(buf) == 16
+
+  f2 = UnionPDU1(buf)
+  @test f1 == f2
+
+  f1 = UnionPDU1(a=1, c=21, d=2.0)
+  buf = Vector{UInt8}(f1)
+  @test length(buf) == 24
+
+  f2 = UnionPDU1(buf)
+  @test f1 == f2
+
+  struct InnerPDU4 <: PDU
+    a::Int8
+    b::Float32
+  end
+
+  struct InnerPDU5 <: PDU
+    a::Int16
+    b::Float64
+  end
+
+  struct UnionPDU2 <: PDU
+    a::Int8
+    b::Union{InnerPDU4,InnerPDU5}
+  end
+
+  UnionPDU2(b::InnerPDU4) = UnionPDU2(1, b)
+  UnionPDU2(b::InnerPDU5) = UnionPDU2(2, b)
+
+  ProtocolDataUnits.fieldtype(::Type{UnionPDU2}, ::Val{:b}, info) = info.get(:a) == 1 ? InnerPDU4 : InnerPDU5
+
+  f1 = UnionPDU2(InnerPDU4(2, 3f0))
+  buf = Vector{UInt8}(f1)
+  @test length(buf) == 6
+  f2 = UnionPDU2(buf)
+  @test f1 == f2
+
+  f1 = UnionPDU2(InnerPDU5(2, 3.0))
+  buf = Vector{UInt8}(f1)
+  @test length(buf) == 11
+  f2 = UnionPDU2(buf)
+  @test f1 == f2
+
+end
+
 @testset "docs" begin
 
   Base.@kwdef struct EthernetFrame <: PDU
@@ -402,5 +488,82 @@ end
 
   buf[5] += 1
   @test_throws ErrorException EthernetFrame(buf)
+
+  struct Header_v1 <: PDU
+    src::UInt32
+    dst::UInt32
+    port::UInt8
+  end
+
+  struct Header_v2 <: PDU
+    src::UInt64
+    dst::UInt64
+    port::UInt16
+  end
+
+  struct AppPDU <: PDU
+    hdrlen::UInt8
+    hdr::Union{Header_v1,Header_v2}
+    payload::Vector{UInt8}
+  end
+
+  AppPDU(hdr::Header_v1, payload) = AppPDU(9, hdr, payload)
+  AppPDU(hdr::Header_v2, payload) = AppPDU(18, hdr, payload)
+
+  function ProtocolDataUnits.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
+    info.get(:hdrlen) == 18 && return Header_v2
+    Header_v1
+  end
+
+  Base.length(::Type{AppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
+
+  pdu = AppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
+  bytes = Vector{UInt8}(pdu)
+  @test length(bytes) == 13
+  pdu2 = AppPDU(bytes)
+  @test pdu.hdr isa Header_v1
+  @test pdu == pdu2
+
+  pdu = AppPDU(Header_v2(1, 2, 3), UInt8[4, 5, 6])
+  bytes = Vector{UInt8}(pdu)
+  @test length(bytes) == 22
+  pdu2 = AppPDU(bytes)
+  @test pdu.hdr isa Header_v2
+  @test pdu == pdu2
+
+  struct App2PDU <: PDU
+    hdrlen::UInt8
+    hdr::Union{Header_v1,Header_v2,Nothing}
+    payload::Vector{UInt8}
+  end
+
+  function App2PDU(; hdr=nothing, payload=UInt8[])
+    hdrlen = 0
+    hdr isa Header_v1 && (hdrlen = 9)
+    hdr isa Header_v2 && (hdrlen = 18)
+    App2PDU(hdrlen, hdr, payload)
+  end
+
+  function ProtocolDataUnits.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
+    info.get(:hdrlen) == 9 && return Header_v1
+    info.get(:hdrlen) == 18 && return Header_v2
+    Nothing
+  end
+
+  Base.length(::Type{App2PDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
+
+  pdu = App2PDU(hdr=Header_v1(1, 2, 3), payload=UInt8[4, 5, 6])
+  bytes = Vector{UInt8}(pdu)
+  @test length(bytes) == 13
+  pdu2 = App2PDU(bytes)
+  @test pdu.hdr isa Header_v1
+  @test pdu == pdu2
+
+  pdu = App2PDU(payload=UInt8[4, 5, 6, 7, 8, 9])
+  bytes = Vector{UInt8}(pdu)
+  @test length(bytes) == 7
+  pdu2 = App2PDU(bytes)
+  @test pdu.hdr === nothing
+  @test pdu == pdu2
 
 end

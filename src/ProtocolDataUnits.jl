@@ -52,7 +52,7 @@ Byte order used for PDUs of type `T`. Defaults to `BIG_ENDIAN`. To change byte
 order, define a method for this function.
 
 # Example:
-```
+```julia
 ProtocolDataUnits.byteorder(::Type{MyPDU}) = LITTLE_ENDIAN
 ```
 """
@@ -65,7 +65,7 @@ Byte order used for PDUs of type `T` for field `s`. Defaults to the same byte
 order as the PDU. To change byte order, define a method for this function.
 
 # Example:
-```
+```julia
 ProtocolDataUnits.byteorder(::Type{MyPDU}, ::Val{:myfield}) = LITTLE_ENDIAN
 ```
 """
@@ -80,7 +80,7 @@ PDU. The length is specified in number of elements for vectors, and number of by
 for strings.
 
 # Examples:
-```
+```julia
 # length of field x is 4 bytes less than length of PDU
 Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.length - 4
 
@@ -89,6 +89,23 @@ Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.get(:n)
 ```
 """
 Base.length(T::Type{<:PDU}, V::Val, info) = nothing
+
+"""
+    fieldtype(::Type{T}, ::Val{s}, info::PDUInfo)
+
+Concrete type of field `s` in PDU of type `T`. Defaults to the type of the field
+in the PDU. To specialize the type based on auxillary information in the PDU,
+define a method for this function.
+
+# Example:
+```julia
+# field x::Union{Int32,Int64} is Int32 if xtype is 4, Int64 otherwise
+ProtocolDataUnits.fieldtype(::Type{MyPDU}, ::Val{:x}, info) = info.get(:xtype) == 4 ? Int32 : Int64
+```
+"""
+fieldtype(T::Type{<:PDU}, ::Val{V}, info) where V = Base.fieldtype(T, V)
+
+## hooks
 
 """
     preencode(pdu::PDU)
@@ -159,14 +176,16 @@ the pre-encode hook is called before encoding the PDU.
 """
 function Base.write(io::IO, pdu::T; hooks=true) where {T<:PDU}
   hooks && (pdu = preencode(pdu))
-  for (f, F) ∈ zip(fieldnames(T), fieldtypes(T))
+  info = PDUInfo(missing, s -> getfield(pdu, s))
+  for f ∈ fieldnames(T)
+    F = fieldtype(T, Val(f), info)
     htop = byteorder(T, Val(f))[1]
     if F <: Number
       write(io, htop(getfield(pdu, f)))
     elseif F <: NTuple{N,<:Number} where N
       write(io, htop.([getfield(pdu, f)...]))
     elseif F <: AbstractVector{<:Number} || F <: AbstractString
-      n = length(T, Val(f), PDUInfo(missing, s -> getfield(pdu, s)))
+      n = length(T, Val(f), info)
       v = getfield(pdu, f)
       v = F <: AbstractString ? Vector{UInt8}(v) : htop.(v)
       if n === nothing
@@ -178,7 +197,7 @@ function Base.write(io::IO, pdu::T; hooks=true) where {T<:PDU}
           write(io, n > length(v) ? vcat(v, zeros(eltype(v), n - length(v))) : @view v[1:n])
         end
       end
-    else
+    elseif F != Nothing
       write(io, getfield(pdu, f))
     end
   end
@@ -210,17 +229,21 @@ post-decode hook is called after decoding the PDU.
 """
 function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing, hooks=true)
   data = Pair{Symbol,Any}[]
-  for (f, F) ∈ zip(fieldnames(T), fieldtypes(T))
+  info = PDUInfo(nbytes, s -> lookup(data, s))
+  for f ∈ fieldnames(T)
+    F = fieldtype(T, Val(f), info)
     ptoh = byteorder(T, Val(f))[2]
     if F <: Number
       push!(data, f => ptoh(read(io, F)))
     elseif F <: NTuple{N,<:Number} where N
       push!(data, f => tuple(ptoh.([read(io, eltype(F)) for _ ∈ 1:fieldcount(F)])...))
     elseif F <: AbstractVector{<:Number} || F <: AbstractString
-      n = length(T, Val(f), PDUInfo(nbytes, s -> lookup(data, s)))
+      n = length(T, Val(f), info)
       V = F <: AbstractString ? UInt8 : eltype(F)
       v = n === nothing ? varread(io, V) : V[read(io, V) for _ ∈ 1:n]
       push!(data, f => F <: AbstractString ? strip(String(v), ['\0']) : ptoh.(v))
+    elseif F == Nothing
+      push!(data, f => nothing)
     else
       n = length(T, Val(f), PDUInfo(nbytes, s -> lookup(data, s)))
       push!(data, f => read(io, F; nbytes=something(n, missing)))
