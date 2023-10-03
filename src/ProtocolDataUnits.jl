@@ -223,14 +223,14 @@ function Base.write(io::IO, pdu::T; hooks=true) where {T<:AbstractPDU}
       if n === WireEncoded()
         varwrite(io, v)
       elseif n === nothing
-        throw(ErrorException("Length of field $(f) is unknown"))
+        throw(ArgumentError("Length of field $(f) is unknown"))
       else
         if n === missing
           write(io, v)
         else
-          length(v) > n && throw(ErrorException("Value too long for field $(f) (expected $n, actual $(length(n)))"))
+          length(v) > n && throw(ArgumentError("Value too long for field $(f) (expected $n, actual $(length(n)))"))
           if length(v) < n
-            autopad || throw(ErrorException("Value too short for field $(f) (expected $n, actual $(length(n)))"))
+            autopad || throw(ArgumentError("Value too short for field $(f) (expected $n, actual $(length(n)))"))
             v = vcat(v, zeros(eltype(v), n - length(v)))
           end
           write(io, v)

@@ -346,7 +346,7 @@ end
 
   pdu = MyLessSimplePDU(1, "hello world! how are you?")
 
-  @test_throws ErrorException PDU.encode(pdu)
+  @test_throws ArgumentError PDU.encode(pdu)
 
   Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = info.length - 2
 
