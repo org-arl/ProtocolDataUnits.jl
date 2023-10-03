@@ -13,6 +13,8 @@ using CRC32
     crc::UInt32 = 0xdeadbeef
   end
 
+  Base.length(::Type{Eth2}, ::Val{:payload}, info) = WireEncoded()
+
   f1 = Eth2()
   buf = PDU.encode(f1)
   f2 = PDU.decode(buf, Eth2)
@@ -96,7 +98,7 @@ end
   @test length(buf) == 6
   @test buf == [0x12, 0x68, 0x65, 0x6c, 0x6c, 0x6f]
 
-  Base.length(::Type{TestPDU}, ::Val{:s}, info) = info.get(:n)
+  Base.length(::Type{TestPDU}, ::Val{:s}, info) = PadTo(info.get(:n))
 
   f1 = TestPDU(0x07, "hello")
   buf = PDU.encode(f1)
@@ -334,7 +336,7 @@ end
   pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu == pdu2
 
-  Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 14
+  Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = PadTo(14)
 
   bytes = PDU.encode(pdu)
   @test length(bytes) == 16
@@ -344,11 +346,7 @@ end
 
   pdu = MyLessSimplePDU(1, "hello world! how are you?")
 
-  bytes = PDU.encode(pdu)
-  @test length(bytes) == 16
-
-  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
-  @test pdu2.b == "hello world! h"
+  @test_throws ErrorException PDU.encode(pdu)
 
   Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = info.length - 2
 
@@ -369,17 +367,13 @@ end
   pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello world!"
 
+  Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = PadTo(2 * info.get(:a))
+
   pdu = MyLessSimplePDU(8, "hello world!")
   bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + 2*8
   pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello world!"
-
-  pdu = MyLessSimplePDU(4, "hello world!")
-  bytes = PDU.encode(pdu)
-  @test length(bytes) == 2 + 2*4
-  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
-  @test pdu2.b == "hello wo"
 
   struct MyVectorPDU <: AbstractPDU
     a::Int16
@@ -443,6 +437,8 @@ end
     a::Int16
     b::Vector{Float64}
   end
+
+  Base.length(::Type{MyVectorPDU2}, ::Val{:b}, info) = WireEncoded()
 
   MyVectorPDU2(b::Vector{Float64}) = MyVectorPDU2(length(b), b)
 

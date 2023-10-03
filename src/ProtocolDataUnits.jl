@@ -1,6 +1,6 @@
 module ProtocolDataUnits
 
-export AbstractPDU, PDU, BIG_ENDIAN, LITTLE_ENDIAN
+export AbstractPDU, PDU, BIG_ENDIAN, LITTLE_ENDIAN, WireEncoded, PadTo
 
 const PDU = ProtocolDataUnits
 
@@ -10,6 +10,24 @@ const PDU = ProtocolDataUnits
 Parent data type for all PDUs.
 """
 abstract type AbstractPDU end
+
+"""
+Tag structure to indicate fixed length fields in PDU.
+
+# Example:
+```julia
+Base.length(::Type{MyPDU}, ::Val{:x}, info) = PadTo(16)
+```
+"""
+struct PadTo
+  n::Int64
+end
+
+"""
+Tag structure to indicate variable length fields in PDU, with length stored
+within the PDU using wire-encoding.
+"""
+struct WireEncoded end
 
 """
 PDU information with fields:
@@ -76,10 +94,9 @@ byteorder(T::Type{<:AbstractPDU}, fld) = byteorder(T)
 """
     length(::Type{T}, ::Val{s}, info::PDUInfo)
 
-Length of field `s` in PDU of type `T`. Defaults to `nothing`, which indicates
-that the length is not known, and wire-encoding is used to store length as part of
-PDU. The length is specified in number of elements for vectors, and number of bytes
-for strings.
+Length of field `s` in PDU of type `T`. Defaults to `nothing` (unknown) for vectors,
+and `WireEncoded()` (stored in the PDU) for strings. The length is specified in
+number of elements for vectors, and number of bytes for strings.
 
 # Examples:
 ```julia
@@ -88,9 +105,15 @@ Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.length - 4
 
 # length of field x is given by the value of field n in the PDU
 Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.get(:n)
+
+# length of field x is 16, and is zero-padded to size if necessary
+Base.length(::Type{MyPDU}, ::Val{:x}, info) = PadTo(16)
+
+# length of field x is variable and stored in the PDU using wire-encoding
+Base.length(::Type{MyPDU}, ::Val{:x}, info) = WireEncoded()
 ```
 """
-Base.length(T::Type{<:AbstractPDU}, V::Val, info) = nothing
+Base.length(T::Type{<:AbstractPDU}, V::Val, info) = fieldtype(T, V, info) <: AbstractString ? WireEncoded() : nothing
 
 """
     fieldtype(::Type{T}, ::Val{s}, info::PDUInfo)
@@ -187,16 +210,30 @@ function Base.write(io::IO, pdu::T; hooks=true) where {T<:AbstractPDU}
     elseif F <: NTuple{N,<:Number} where N
       write(io, htop.([getfield(pdu, f)...]))
     elseif F <: AbstractVector{<:Number} || F <: AbstractString
-      n = length(T, Val(f), info)
+      nn = length(T, Val(f), info)
+      if nn isa PadTo
+        n = nn.n
+        autopad = true
+      else
+        n = nn
+        autopad = false
+      end
       v = getfield(pdu, f)
       v = F <: AbstractString ? Vector{UInt8}(v) : htop.(v)
-      if n === nothing
+      if n === WireEncoded()
         varwrite(io, v)
+      elseif n === nothing
+        throw(ErrorException("Length of field $(f) is unknown"))
       else
         if n === missing
           write(io, v)
         else
-          write(io, n > length(v) ? vcat(v, zeros(eltype(v), n - length(v))) : @view v[1:n])
+          length(v) > n && throw(ErrorException("Value too long for field $(f) (expected $n, actual $(length(n)))"))
+          if length(v) < n
+            autopad || throw(ErrorException("Value too short for field $(f) (expected $n, actual $(length(n)))"))
+            v = vcat(v, zeros(eltype(v), n - length(v)))
+          end
+          write(io, v)
         end
       end
     elseif F != Nothing
@@ -240,9 +277,10 @@ function Base.read(io::IO, T::Type{<:AbstractPDU}; nbytes=missing, hooks=true)
     elseif F <: NTuple{N,<:Number} where N
       push!(data, f => tuple(ptoh.([read(io, eltype(F)) for _ ∈ 1:fieldcount(F)])...))
     elseif F <: AbstractVector{<:Number} || F <: AbstractString
-      n = length(T, Val(f), info)
+      nn = length(T, Val(f), info)
+      n = nn isa PadTo ? nn.n : nn
       V = F <: AbstractString ? UInt8 : eltype(F)
-      v = n === nothing ? varread(io, V) : V[read(io, V) for _ ∈ 1:n]
+      v = n === WireEncoded() ? varread(io, V) : V[read(io, V) for _ ∈ 1:n]
       push!(data, f => F <: AbstractString ? strip(String(v), ['\0']) : ptoh.(v))
     elseif F == Nothing
       push!(data, f => nothing)

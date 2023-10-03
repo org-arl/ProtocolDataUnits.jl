@@ -138,7 +138,7 @@ The PDU will have a size of 15 bytes (2 bytes for `a`, 12 bytes for `b = "hello 
 
 If we knew the maximum length of the string beforehand (say 14 bytes), and wanted a fixed length PDU (14+2=16 bytes), we could declare the length:
 ```julia
-Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 14
+Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = PadTo(14)
 
 bytes = PDU.encode(pdu)
 @assert length(bytes) == 16
@@ -146,16 +146,7 @@ bytes = PDU.encode(pdu)
 pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu == pdu2
 ```
-Since the string `b = "hello world!"` occupies only 12 bytes, it is padded with two null (`'\0`) bytes. If the length of `b` was larger than the allocated length, the string would be truncated:
-```julia
-pdu = MyLessSimplePDU(1, "hello world! how are you?")
-
-bytes = PDU.encode(pdu)
-@assert length(bytes) == 16
-
-pdu2 = PDU.decode(bytes, MyLessSimplePDU)
-@assert pdu2.b == "hello world! h"
-```
+Since the string `b = "hello world!"` occupies only 12 bytes, it is padded with two null (`'\0`) bytes. If the length of `b` was larger than the allocated length, the encoding will throw an exception.
 
 We could also support variable length strings without having to store the length in the PDU if we knew the size of the PDU while decoding. To do so, we need to declare that the length of the string must be 2 bytes less than the length of the whole PDU:
 ```julia
@@ -185,29 +176,26 @@ bytes = PDU.encode(pdu)
 pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello world!"
 ```
-Had we set an `a` that is too small or big, the string would have been truncated or null padded:
+Had we set an `a` that is too small or big, we would get an exception complaining about the length. If we wanted the string to be null padded automatically, we could specify that:
 ```julia
+Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = PadTo(2 * info.get(:a))
+
 # string is null padded to 16 bytes
 pdu = MyLessSimplePDU(8, "hello world!")
 bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 2*8
 pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello world!"
-
-# string is truncated to 8 bytes
-pdu = MyLessSimplePDU(4, "hello world!")
-bytes = PDU.encode(pdu)
-@assert length(bytes) == 2 + 2*4
-pdu2 = PDU.decode(bytes, MyLessSimplePDU)
-@assert pdu2.b == "hello wo"
 ```
 
-Variable length vector fields work exactly in the same way, with length being defined as the number of elements in the vector (not number of bytes):
+Variable length vector fields work exactly in the same way, with length being defined as the number of elements in the vector (not number of bytes). However, for vectors, the default length is `nothing` (unknown), and so we need an explicit declaration to change it to wire-encoding if we want the vector length to be stored in the PDU:
 ```julia
 struct MyVectorPDU <: AbstractPDU
   a::Int16
   b::Vector{Float64}
 end
+
+Base.length(::Type{MyVectorPDU2}, ::Val{:b}, info) = WireEncoded()
 
 # vector length is in number of Float64, but info.length is in number of bytes
 Base.length(::Type{MyVectorPDU}, ::Val{:b}, info) = (info.length - 2) ÷ sizeof(Float64)
