@@ -35,10 +35,10 @@ frame = EthernetFrame(
 )
 
 # convert to a byte array
-bytes = Vector{UInt8}(frame)
+bytes = PDU.encode(frame)
 
 # convert back to Ethernet frame
-decoded = EthernetFrame(bytes)
+decoded = PDU.decode(bytes, EthernetFrame)
 
 # check that they are the same
 @assert frame == decoded
@@ -67,14 +67,14 @@ When a field is of a union type, a `fieldtype()` definition must be available to
 
 PDUs are encoded into bytes in one of two ways:
 ```julia
-bytes = Vector{UInt8}(pdu)  # returns a vector of bytes
-write(io, pdu)              # writes bytes to an IOStream
+bytes = PDU.encode(pdu)         # returns a vector of bytes
+write(io, pdu)                  # writes bytes to an IOStream
 ```
 
 PDUs are decoded from bytes in one of two ways:
 ```julia
-pdu = MyPDU(bytes)          # creates a MyPDU from bytes
-pdu = read(io, MyPDU)       # creates a MyPDU by reading bytes from an IOStream
+pdu = PDU.decode(bytes, MyPDU)  # creates a MyPDU from bytes
+pdu = read(io, MyPDU)           # creates a MyPDU by reading bytes from an IOStream
 ```
 
 Usage is best illustrated through a series of examples.
@@ -96,7 +96,7 @@ pdu = MySimplePDU(1, 2, 3, (4,5), 6f0, 7.0)
 ```
 and then encode it into bytes:
 ```julia
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 ```
 This yields `bytes = [0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x05, 0x40, 0xc0, 0x00, 0x00, 0x40, 0x1c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]`.
 
@@ -107,13 +107,13 @@ PDU.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN
 
 Now:
 ```julia
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 ```
 yields `[0x01, 0x00, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x40]`.
 
 The bytes can be converted back to a PDU:
 ```julia
-pdu2 = MySimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MySimplePDU)
 ```
 and we can verify that the recovered PDU has the same contents as the original: `@assert pdu == pdu2`.
 
@@ -130,8 +130,8 @@ pdu = MyLessSimplePDU(1, "hello world!")
 ```
 We can convert the PDU to bytes and back:
 ```julia
-bytes = Vector{UInt8}(pdu)
-pdu2 = MyLessSimplePDU(bytes)
+bytes = PDU.encode(pdu)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu == pdu2
 ```
 The PDU will have a size of 15 bytes (2 bytes for `a`, 12 bytes for `b = "hello world!"`, and 1 byte to store the length of `b`). The length of the string is encoded as a variable length number using wire-encoding.
@@ -140,20 +140,20 @@ If we knew the maximum length of the string beforehand (say 14 bytes), and wante
 ```julia
 Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 14
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 16
 
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu == pdu2
 ```
 Since the string `b = "hello world!"` occupies only 12 bytes, it is padded with two null (`'\0`) bytes. If the length of `b` was larger than the allocated length, the string would be truncated:
 ```julia
 pdu = MyLessSimplePDU(1, "hello world! how are you?")
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 16
 
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello world! h"
 ```
 
@@ -163,10 +163,10 @@ Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = info.length - 2
 ```
 The `info` object provides information on the PDU being encoded or decoded. `info.length` tells us the size of the PDU in bytes, if known (otherwise it is `missing`). Now, we can encode arbitrary length strings in our PDU without the overhead of storing the length of the string:
 ```julia
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + length("hello world! how are you?")
 
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello world! how are you?"
 @assert pdu == pdu2
 ```
@@ -179,26 +179,26 @@ Here `info.get()` provides us access to fields that are decoded earlier in the b
 ```julia
 pdu = MyLessSimplePDU(6, "hello world!")
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 2*6
 
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello world!"
 ```
 Had we set an `a` that is too small or big, the string would have been truncated or null padded:
 ```julia
 # string is null padded to 16 bytes
 pdu = MyLessSimplePDU(8, "hello world!")
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 2*8
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello world!"
 
 # string is truncated to 8 bytes
 pdu = MyLessSimplePDU(4, "hello world!")
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 2*4
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == "hello wo"
 ```
 
@@ -213,9 +213,9 @@ end
 Base.length(::Type{MyVectorPDU}, ::Val{:b}, info) = (info.length - 2) ÷ sizeof(Float64)
 
 pdu = MyVectorPDU(1, [1.0, 2.0, 3.0])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 3 * sizeof(Float64)
-pdu2 = MyVectorPDU(bytes)
+pdu2 = PDU.decode(bytes, MyVectorPDU)
 @assert pdu == pdu2
 ```
 
@@ -238,10 +238,10 @@ pdu = OuterPDU(1, InnerPDU(2, 3f0), 4)
 ```
 and encode and decode them effortlessly:
 ```julia
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + (1 + 4) + 1
 
-pdu2 = OuterPDU(bytes)
+pdu2 = PDU.decode(bytes, OuterPDU)
 
 @assert pdu2.y == pdu.y   # inner PDU matches
 @assert pdu == pdu       # so does the outer PDU2
@@ -265,10 +265,10 @@ Base.length(::Type{OuterPDU2}, ::Val{:y}, info) = info.length - 3
 
 pdu = OuterPDU2(1, InnerPDU2(2, "hello world!"), 4)
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + (1 + 12) + 1
 
-pdu2 = OuterPDU2(bytes)
+pdu2 = PDU.decode(bytes, OuterPDU2)
 
 @assert pdu2.y == pdu.y
 @assert pdu == pdu2
@@ -302,10 +302,10 @@ This will ensure that field `a` is populated correctly at time of encoding:
 push!(pdu.b, 4.0)           # add 4th element to b
 @assert pdu.a == 3          # now pdu is inconsistent, since pdu.a == 3
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert bytes[2] == 4       # encoded bytes show 4 elements correctly
 
-pdu2 = MyVectorPDU2(bytes)
+pdu2 = PDU.decode(bytes, MyVectorPDU2)
 @assert pdu2.a == 4         # decoded pdu also shows 4 elements correctly
 @assert length(pdu2.b) == 4 # and it indeed contains 4 elements
 ```
@@ -317,13 +317,13 @@ Sometimes we may want to pre-process PDUs to compute CRC, or post-process them t
 using CRC32
 
 function PDU.preencode(pdu::EthernetFrame)
-  bytes = Vector{UInt8}(pdu; hooks=false)   # encode without computing CRC
+  bytes = PDU.encode(pdu; hooks=false)   # encode without computing CRC
   crc = crc32(bytes[1:end-4])               # compute CRC
   @set pdu.crc = crc                        # make a new frame with CRC filled in
 end
 
 function PDU.postdecode(pdu::EthernetFrame)
-  bytes = Vector{UInt8}(pdu; hooks=false)   # re-encode the frame for CRC computation
+  bytes = PDU.encode(pdu; hooks=false)   # re-encode the frame for CRC computation
   pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
   pdu                                       # return unaltered pdu if CRC OK
 end
@@ -335,7 +335,7 @@ frame = EthernetFrame(
   payload = [0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14]
 )
 
-buf = Vector{UInt8}(frame)
+buf = PDU.encode(frame)
 frame2 = EthernetFrame(buf)
 @assert frame.payload == frame2.payload
 ```
@@ -385,17 +385,17 @@ We can now create either type of PDU and decode it without having a priori knowl
 ```julia
 # v1 header
 pdu = AppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 13
-pdu2 = AppPDU(bytes)
+pdu2 = PDU.decode(bytes, AppPDU)
 @assert pdu.hdr isa Header_v1
 @assert pdu == pdu2
 
 # v2 header
 pdu = AppPDU(Header_v2(1, 2, 3), UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 22
-pdu2 = AppPDU(bytes)
+pdu2 = PDU.decode(bytes, AppPDU)
 @assert pdu.hdr isa Header_v2
 @assert pdu == pdu2
 ```
@@ -424,9 +424,9 @@ end
 Base.length(::Type{<:ParamAppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
 
 pdu = ParamAppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 13
-pdu2 = ParamAppPDU(bytes)
+pdu2 = PDU.decode(bytes, ParamAppPDU)
 @assert pdu.hdr isa Header_v1
 @assert pdu == pdu2
 ```
@@ -463,17 +463,17 @@ and work PDUs with or without headers:
 ```julia
 # v1 header
 pdu = App2PDU(hdr=Header_v1(1, 2, 3), payload=UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 13
-pdu2 = App2PDU(bytes)
+pdu2 = PDU.decode(bytes, App2PDU)
 @assert pdu.hdr isa Header_v1
 @assert pdu == pdu2
 
 # no header
 pdu = App2PDU(payload=UInt8[4, 5, 6, 7, 8, 9])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 7
-pdu2 = App2PDU(bytes)
+pdu2 = PDU.decode(bytes, App2PDU)
 @assert pdu.hdr === nothing
 @assert pdu == pdu2
 ```

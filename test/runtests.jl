@@ -14,23 +14,23 @@ using CRC32
   end
 
   f1 = Eth2()
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 19
   @test buf == [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x08, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef]
 
   f1 = Eth2(payload = UInt8.(collect(1:127)))
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 19 + 127
 
   f1 = Eth2(payload = UInt8.(collect(1:255)))
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 20 + 255
@@ -38,8 +38,8 @@ using CRC32
   Base.length(::Type{Eth2}, ::Val{:payload}, info) = info.length - 18
 
   f1 = Eth2()
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 18
@@ -48,23 +48,23 @@ using CRC32
   PDU.byteorder(::Type{Eth2}) = LITTLE_ENDIAN
 
   f1 = Eth2()
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 18
   @test buf == [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00, 0x08, 0xef, 0xbe, 0xad, 0xde]
 
   f1 = Eth2(payload = UInt8.(collect(1:127)))
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 18 + 127
 
   f1 = Eth2(payload = UInt8.(collect(1:255)))
-  buf = Vector{UInt8}(f1)
-  f2 = Eth2(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, Eth2)
 
   @test f1 == f2
   @test length(buf) == 18 + 255
@@ -79,8 +79,8 @@ end
   end
 
   f1 = TestPDU(0x12, "hello")
-  buf = Vector{UInt8}(f1)
-  f2 = TestPDU(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, TestPDU)
 
   @test f1 == f2
   @test length(buf) == 7
@@ -89,8 +89,8 @@ end
   Base.length(::Type{TestPDU}, ::Val{:s}, info) = info.length - 1
 
   f1 = TestPDU(0x12, "hello")
-  buf = Vector{UInt8}(f1)
-  f2 = TestPDU(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, TestPDU)
 
   @test f1 == f2
   @test length(buf) == 6
@@ -99,8 +99,8 @@ end
   Base.length(::Type{TestPDU}, ::Val{:s}, info) = info.get(:n)
 
   f1 = TestPDU(0x07, "hello")
-  buf = Vector{UInt8}(f1)
-  f2 = TestPDU(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, TestPDU)
 
   @test f1 == f2
   @test length(buf) == 8
@@ -126,8 +126,8 @@ end
 
   f1in = InnerPDU3(0x1234, "hello")
   f1 = OuterPDU3(0x5678, f1in)
-  buf = Vector{UInt8}(f1)
-  f2 = OuterPDU3(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, OuterPDU3)
 
   @test f1.n == f2.n
   @test f1.inner == f2.inner
@@ -139,8 +139,8 @@ end
 
   f1in = InnerPDU3(0x05, "hello")
   f1 = OuterPDU3(0x5678, f1in)
-  buf = Vector{UInt8}(f1)
-  f2 = OuterPDU3(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, OuterPDU3)
 
   @test f1.n == f2.n
   @test f1.inner == f2.inner
@@ -153,8 +153,8 @@ end
 
   f1in = InnerPDU3(0x1234, "hello")
   f1 = OuterPDU3(0x5678, f1in)
-  buf = Vector{UInt8}(f1)
-  f2 = OuterPDU3(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, OuterPDU3)
 
   @test f1.n == f2.n
   @test f1.inner == f2.inner
@@ -172,25 +172,25 @@ end
   end
 
   function PDU.preencode(pdu::ChecksumPDU)
-    bytes = Vector{UInt8}(pdu; hooks=false)
+    bytes = PDU.encode(pdu; hooks=false)
     crc = crc32(bytes[1:end-4])
     @set pdu.crc = crc
   end
 
   function PDU.postdecode(pdu::ChecksumPDU)
-    bytes = Vector{UInt8}(pdu; hooks=false)
+    bytes = PDU.encode(pdu; hooks=false)
     pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
     pdu
   end
 
   f1 = ChecksumPDU((1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), 0xdeadbeef)
-  buf = Vector{UInt8}(f1)
-  f2 = ChecksumPDU(buf)
+  buf = PDU.encode(f1)
+  f2 = PDU.decode(buf, ChecksumPDU)
   @test f1.a == f2.a
   @test f2.crc != 0xdeadbeef
 
   buf[5] += 1
-  @test_throws ErrorException ChecksumPDU(buf)
+  @test_throws ErrorException PDU.decode(buf, ChecksumPDU)
 
 end
 
@@ -204,10 +204,10 @@ end
   end
 
   f1 = NothingPDU(a=1, d=2.0)
-  buf = Vector{UInt8}(f1)
+  buf = PDU.encode(f1)
   @test length(buf) == 16
 
-  f2 = NothingPDU(buf)
+  f2 = PDU.decode(buf, NothingPDU)
   @test f1 == f2
 
 end
@@ -224,26 +224,26 @@ end
   PDU.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = Nothing
 
   f1 = UnionPDU1(a=1, d=2.0)
-  buf = Vector{UInt8}(f1)
+  buf = PDU.encode(f1)
   @test length(buf) == 16
 
-  f2 = UnionPDU1(buf)
+  f2 = PDU.decode(buf, UnionPDU1)
   @test f1 == f2
 
   PDU.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = info.get(:a) == 1 ? Int64 : Nothing
 
   f1 = UnionPDU1(d=2.0)
-  buf = Vector{UInt8}(f1)
+  buf = PDU.encode(f1)
   @test length(buf) == 16
 
-  f2 = UnionPDU1(buf)
+  f2 = PDU.decode(buf, UnionPDU1)
   @test f1 == f2
 
   f1 = UnionPDU1(a=1, c=21, d=2.0)
-  buf = Vector{UInt8}(f1)
+  buf = PDU.encode(f1)
   @test length(buf) == 24
 
-  f2 = UnionPDU1(buf)
+  f2 = PDU.decode(buf, UnionPDU1)
   @test f1 == f2
 
   struct InnerPDU4 <: AbstractPDU
@@ -267,15 +267,15 @@ end
   PDU.fieldtype(::Type{UnionPDU2}, ::Val{:b}, info) = info.get(:a) == 1 ? InnerPDU4 : InnerPDU5
 
   f1 = UnionPDU2(InnerPDU4(2, 3f0))
-  buf = Vector{UInt8}(f1)
+  buf = PDU.encode(f1)
   @test length(buf) == 6
-  f2 = UnionPDU2(buf)
+  f2 = PDU.decode(buf, UnionPDU2)
   @test f1 == f2
 
   f1 = UnionPDU2(InnerPDU5(2, 3.0))
-  buf = Vector{UInt8}(f1)
+  buf = PDU.encode(f1)
   @test length(buf) == 11
-  f2 = UnionPDU2(buf)
+  f2 = PDU.decode(buf, UnionPDU2)
   @test f1 == f2
 
 end
@@ -299,8 +299,8 @@ end
     payload = [0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14]
   )
 
-  bytes = Vector{UInt8}(frame)
-  decoded = EthernetFrame(bytes)
+  bytes = PDU.encode(frame)
+  decoded = PDU.decode(bytes, EthernetFrame)
   @test frame == decoded
 
   struct MySimplePDU <: AbstractPDU
@@ -313,15 +313,15 @@ end
   end
 
   pdu = MySimplePDU(1, 2, 3, (4,5), 6f0, 7.0)
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test bytes == UInt8[0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x05, 0x40, 0xc0, 0x00, 0x00, 0x40, 0x1c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
   PDU.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test bytes == UInt8[0x01, 0x00, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x40]
 
-  pdu2 = MySimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MySimplePDU)
   @test pdu == pdu2
 
   struct MyLessSimplePDU <: AbstractPDU
@@ -330,32 +330,32 @@ end
   end
 
   pdu = MyLessSimplePDU(1, "hello world!")
-  bytes = Vector{UInt8}(pdu)
-  pdu2 = MyLessSimplePDU(bytes)
+  bytes = PDU.encode(pdu)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu == pdu2
 
   Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 14
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 16
 
-  pdu2 = MyLessSimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu == pdu2
 
   pdu = MyLessSimplePDU(1, "hello world! how are you?")
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 16
 
-  pdu2 = MyLessSimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello world! h"
 
   Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = info.length - 2
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + length("hello world! how are you?")
 
-  pdu2 = MyLessSimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello world! how are you?"
   @test pdu == pdu2
 
@@ -363,22 +363,22 @@ end
 
   pdu = MyLessSimplePDU(6, "hello world!")
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + 2*6
 
-  pdu2 = MyLessSimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello world!"
 
   pdu = MyLessSimplePDU(8, "hello world!")
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + 2*8
-  pdu2 = MyLessSimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello world!"
 
   pdu = MyLessSimplePDU(4, "hello world!")
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + 2*4
-  pdu2 = MyLessSimplePDU(bytes)
+  pdu2 = PDU.decode(bytes, MyLessSimplePDU)
   @test pdu2.b == "hello wo"
 
   struct MyVectorPDU <: AbstractPDU
@@ -389,9 +389,9 @@ end
   Base.length(::Type{MyVectorPDU}, ::Val{:b}, info) = (info.length - 2) ÷ sizeof(Float64)
 
   pdu = MyVectorPDU(1, [1.0, 2.0, 3.0])
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + 3 * sizeof(Float64)
-  pdu2 = MyVectorPDU(bytes)
+  pdu2 = PDU.decode(bytes, MyVectorPDU)
   @test pdu == pdu2
 
   struct InnerPDU <: AbstractPDU
@@ -407,10 +407,10 @@ end
 
   pdu = OuterPDU(1, InnerPDU(2, 3f0), 4)
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + (1 + 4) + 1
 
-  pdu2 = OuterPDU(bytes)
+  pdu2 = PDU.decode(bytes, OuterPDU)
 
   @test pdu2.y == pdu.y   # inner PDU matches
   @test pdu == pdu2       # so does the outer PDU
@@ -431,10 +431,10 @@ end
 
   pdu = OuterPDU2(1, InnerPDU2(2, "hello world!"), 4)
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 2 + (1 + 12) + 1
 
-  pdu2 = OuterPDU2(bytes)
+  pdu2 = PDU.decode(bytes, OuterPDU2)
 
   @test pdu2.y == pdu.y
   @test pdu == pdu2
@@ -456,21 +456,21 @@ end
   push!(pdu.b, 4.0)
   @test pdu.a == 3
 
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test bytes[2] == 4
 
-  pdu2 = MyVectorPDU2(bytes)
+  pdu2 = PDU.decode(bytes, MyVectorPDU2)
   @test pdu2.a == 4
   @test length(pdu2.b) == 4
 
   function PDU.preencode(pdu::EthernetFrame)
-    bytes = Vector{UInt8}(pdu; hooks=false)
+    bytes = PDU.encode(pdu; hooks=false)
     crc = crc32(bytes[1:end-4])
     @set pdu.crc = crc
   end
 
   function PDU.postdecode(pdu::EthernetFrame)
-    bytes = Vector{UInt8}(pdu; hooks=false)
+    bytes = PDU.encode(pdu; hooks=false)
     pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
     pdu
   end
@@ -482,12 +482,12 @@ end
     payload = [0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14]
   )
 
-  buf = Vector{UInt8}(frame)
-  frame2 = EthernetFrame(buf)
+  buf = PDU.encode(frame)
+  frame2 = PDU.decode(buf, EthernetFrame)
   @test frame.payload == frame2.payload
 
   buf[5] += 1
-  @test_throws ErrorException EthernetFrame(buf)
+  @test_throws ErrorException PDU.decode(buf, EthernetFrame)
 
   struct Header_v1 <: AbstractPDU
     src::UInt32
@@ -518,16 +518,16 @@ end
   Base.length(::Type{AppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
 
   pdu = AppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 13
-  pdu2 = AppPDU(bytes)
+  pdu2 = PDU.decode(bytes, AppPDU)
   @test pdu.hdr isa Header_v1
   @test pdu == pdu2
 
   pdu = AppPDU(Header_v2(1, 2, 3), UInt8[4, 5, 6])
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 22
-  pdu2 = AppPDU(bytes)
+  pdu2 = PDU.decode(bytes, AppPDU)
   @test pdu.hdr isa Header_v2
   @test pdu == pdu2
 
@@ -548,9 +548,9 @@ end
   Base.length(::Type{<:ParamAppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
 
   pdu = ParamAppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 13
-  pdu2 = ParamAppPDU(bytes)
+  pdu2 = PDU.decode(bytes, ParamAppPDU)
   @test pdu.hdr isa Header_v1
   @test pdu == pdu2
 
@@ -576,16 +576,16 @@ end
   Base.length(::Type{App2PDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
 
   pdu = App2PDU(hdr=Header_v1(1, 2, 3), payload=UInt8[4, 5, 6])
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 13
-  pdu2 = App2PDU(bytes)
+  pdu2 = PDU.decode(bytes, App2PDU)
   @test pdu.hdr isa Header_v1
   @test pdu == pdu2
 
   pdu = App2PDU(payload=UInt8[4, 5, 6, 7, 8, 9])
-  bytes = Vector{UInt8}(pdu)
+  bytes = PDU.encode(pdu)
   @test length(bytes) == 7
-  pdu2 = App2PDU(bytes)
+  pdu2 = PDU.decode(bytes, App2PDU)
   @test pdu.hdr === nothing
   @test pdu == pdu2
 

@@ -155,12 +155,12 @@ postdecode(pdu::AbstractPDU) = pdu
 ## API
 
 """
-    Vector{UInt8}(pdu::AbstractPDU; hooks=true)
+    PDU.encode(pdu::AbstractPDU; hooks=true)
 
 Encodes a PDU into a vector of bytes. If `hooks` is `true`, the pre-encode hook
 is called before encoding the PDU.
 """
-function Vector{UInt8}(pdu::AbstractPDU; hooks=true)
+function encode(pdu::AbstractPDU; hooks=true)
   io = IOBuffer()
   try
     write(io, pdu; hooks)
@@ -207,12 +207,12 @@ function Base.write(io::IO, pdu::T; hooks=true) where {T<:AbstractPDU}
 end
 
 """
-    (T::Type{<:AbstractPDU})(buf::Vector{UInt8}; hooks=true)
+    PDU.decode(buf::Vector{UInt8}, T::Type{<:AbstractPDU}; hooks=true)
 
 Decodes a vector of bytes to give a PDU. If `hooks` is `true`, the post-decode hook
 is called after decoding the PDU.
 """
-function (T::Type{<:AbstractPDU})(buf::Vector{UInt8}; hooks=true)
+function decode(buf::Vector{UInt8}, T::Type{<:AbstractPDU}; hooks=true)
   io = IOBuffer(buf)
   try
     read(io, T; nbytes=length(buf))
