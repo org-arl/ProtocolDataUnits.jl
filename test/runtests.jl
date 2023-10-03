@@ -5,7 +5,7 @@ using CRC32
 
 @testset "basic" begin
 
-  Base.@kwdef struct Eth2 <: PDU
+  Base.@kwdef struct Eth2 <: AbstractPDU
     dstaddr::NTuple{6,UInt8} = (1,2,3,4,5,6)
     srcaddr::NTuple{6,UInt8} = (6,5,4,3,2,1)
     ethtype::UInt16 = 0x800
@@ -45,7 +45,7 @@ using CRC32
   @test length(buf) == 18
   @test buf == [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x08, 0x00, 0xde, 0xad, 0xbe, 0xef]
 
-  ProtocolDataUnits.byteorder(::Type{Eth2}) = LITTLE_ENDIAN
+  PDU.byteorder(::Type{Eth2}) = LITTLE_ENDIAN
 
   f1 = Eth2()
   buf = Vector{UInt8}(f1)
@@ -73,7 +73,7 @@ end
 
 @testset "strings" begin
 
-  struct TestPDU <: PDU
+  struct TestPDU <: AbstractPDU
     n::UInt8
     s::String
   end
@@ -114,12 +114,12 @@ end
 
 @testset "nested" begin
 
-  struct InnerPDU3 <: PDU
+  struct InnerPDU3 <: AbstractPDU
     a::UInt16
     b::String
   end
 
-  struct OuterPDU3 <: PDU
+  struct OuterPDU3 <: AbstractPDU
     n::UInt16
     inner::InnerPDU3
   end
@@ -166,18 +166,18 @@ end
 
 @testset "hooks" begin
 
-  struct ChecksumPDU <: PDU
+  struct ChecksumPDU <: AbstractPDU
     a::NTuple{16,UInt64}
     crc::UInt32
   end
 
-  function ProtocolDataUnits.preencode(pdu::ChecksumPDU)
+  function PDU.preencode(pdu::ChecksumPDU)
     bytes = Vector{UInt8}(pdu; hooks=false)
     crc = crc32(bytes[1:end-4])
     @set pdu.crc = crc
   end
 
-  function ProtocolDataUnits.postdecode(pdu::ChecksumPDU)
+  function PDU.postdecode(pdu::ChecksumPDU)
     bytes = Vector{UInt8}(pdu; hooks=false)
     pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
     pdu
@@ -196,7 +196,7 @@ end
 
 @testset "nothings" begin
 
-  Base.@kwdef struct NothingPDU <: PDU
+  Base.@kwdef struct NothingPDU <: AbstractPDU
     a::Int64
     b::Nothing = nothing
     c::Nothing = nothing
@@ -214,14 +214,14 @@ end
 
 @testset "unions" begin
 
-  Base.@kwdef struct UnionPDU1 <: PDU
+  Base.@kwdef struct UnionPDU1 <: AbstractPDU
     a::Int64 = 0
     b::Nothing = nothing
     c::Union{Nothing,Int64} = nothing
     d::Float64
   end
 
-  ProtocolDataUnits.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = Nothing
+  PDU.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = Nothing
 
   f1 = UnionPDU1(a=1, d=2.0)
   buf = Vector{UInt8}(f1)
@@ -230,7 +230,7 @@ end
   f2 = UnionPDU1(buf)
   @test f1 == f2
 
-  ProtocolDataUnits.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = info.get(:a) == 1 ? Int64 : Nothing
+  PDU.fieldtype(::Type{UnionPDU1}, ::Val{:c}, info) = info.get(:a) == 1 ? Int64 : Nothing
 
   f1 = UnionPDU1(d=2.0)
   buf = Vector{UInt8}(f1)
@@ -246,17 +246,17 @@ end
   f2 = UnionPDU1(buf)
   @test f1 == f2
 
-  struct InnerPDU4 <: PDU
+  struct InnerPDU4 <: AbstractPDU
     a::Int8
     b::Float32
   end
 
-  struct InnerPDU5 <: PDU
+  struct InnerPDU5 <: AbstractPDU
     a::Int16
     b::Float64
   end
 
-  struct UnionPDU2 <: PDU
+  struct UnionPDU2 <: AbstractPDU
     a::Int8
     b::Union{InnerPDU4,InnerPDU5}
   end
@@ -264,7 +264,7 @@ end
   UnionPDU2(b::InnerPDU4) = UnionPDU2(1, b)
   UnionPDU2(b::InnerPDU5) = UnionPDU2(2, b)
 
-  ProtocolDataUnits.fieldtype(::Type{UnionPDU2}, ::Val{:b}, info) = info.get(:a) == 1 ? InnerPDU4 : InnerPDU5
+  PDU.fieldtype(::Type{UnionPDU2}, ::Val{:b}, info) = info.get(:a) == 1 ? InnerPDU4 : InnerPDU5
 
   f1 = UnionPDU2(InnerPDU4(2, 3f0))
   buf = Vector{UInt8}(f1)
@@ -282,7 +282,7 @@ end
 
 @testset "docs" begin
 
-  Base.@kwdef struct EthernetFrame <: PDU
+  Base.@kwdef struct EthernetFrame <: AbstractPDU
     dstaddr::NTuple{6,UInt8}    # fixed length
     srcaddr::NTuple{6,UInt8}    # fixed length
     ethtype::UInt16             # fixed length
@@ -303,7 +303,7 @@ end
   decoded = EthernetFrame(bytes)
   @test frame == decoded
 
-  struct MySimplePDU <: PDU
+  struct MySimplePDU <: AbstractPDU
     a::Int16
     b::UInt8
     c::UInt8
@@ -316,7 +316,7 @@ end
   bytes = Vector{UInt8}(pdu)
   @test bytes == UInt8[0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x05, 0x40, 0xc0, 0x00, 0x00, 0x40, 0x1c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
-  ProtocolDataUnits.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN
+  PDU.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN
 
   bytes = Vector{UInt8}(pdu)
   @test bytes == UInt8[0x01, 0x00, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x40]
@@ -324,7 +324,7 @@ end
   pdu2 = MySimplePDU(bytes)
   @test pdu == pdu2
 
-  struct MyLessSimplePDU <: PDU
+  struct MyLessSimplePDU <: AbstractPDU
     a::Int16
     b::String
   end
@@ -381,7 +381,7 @@ end
   pdu2 = MyLessSimplePDU(bytes)
   @test pdu2.b == "hello wo"
 
-  struct MyVectorPDU <: PDU
+  struct MyVectorPDU <: AbstractPDU
     a::Int16
     b::Vector{Float64}
   end
@@ -394,12 +394,12 @@ end
   pdu2 = MyVectorPDU(bytes)
   @test pdu == pdu2
 
-  struct InnerPDU <: PDU
+  struct InnerPDU <: AbstractPDU
     a::Int8
     b::Float32
   end
 
-  struct OuterPDU <: PDU
+  struct OuterPDU <: AbstractPDU
     x::Int16
     y::InnerPDU
     z::Int8
@@ -415,12 +415,12 @@ end
   @test pdu2.y == pdu.y   # inner PDU matches
   @test pdu == pdu2       # so does the outer PDU
 
-  struct InnerPDU2 <: PDU
+  struct InnerPDU2 <: AbstractPDU
     a::Int8
     b::String
   end
 
-  struct OuterPDU2 <: PDU
+  struct OuterPDU2 <: AbstractPDU
     x::Int16
     y::InnerPDU2
     z::Int8
@@ -439,7 +439,7 @@ end
   @test pdu2.y == pdu.y
   @test pdu == pdu2
 
-  struct MyVectorPDU2 <: PDU
+  struct MyVectorPDU2 <: AbstractPDU
     a::Int16
     b::Vector{Float64}
   end
@@ -449,7 +449,7 @@ end
   pdu = MyVectorPDU2([1.0, 2.0, 3.0])
   @test pdu.a == 3
 
-  function ProtocolDataUnits.preencode(pdu::MyVectorPDU2)
+  function PDU.preencode(pdu::MyVectorPDU2)
     @set pdu.a = length(pdu.b)
   end
 
@@ -463,13 +463,13 @@ end
   @test pdu2.a == 4
   @test length(pdu2.b) == 4
 
-  function ProtocolDataUnits.preencode(pdu::EthernetFrame)
+  function PDU.preencode(pdu::EthernetFrame)
     bytes = Vector{UInt8}(pdu; hooks=false)
     crc = crc32(bytes[1:end-4])
     @set pdu.crc = crc
   end
 
-  function ProtocolDataUnits.postdecode(pdu::EthernetFrame)
+  function PDU.postdecode(pdu::EthernetFrame)
     bytes = Vector{UInt8}(pdu; hooks=false)
     pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
     pdu
@@ -489,19 +489,19 @@ end
   buf[5] += 1
   @test_throws ErrorException EthernetFrame(buf)
 
-  struct Header_v1 <: PDU
+  struct Header_v1 <: AbstractPDU
     src::UInt32
     dst::UInt32
     port::UInt8
   end
 
-  struct Header_v2 <: PDU
+  struct Header_v2 <: AbstractPDU
     src::UInt64
     dst::UInt64
     port::UInt16
   end
 
-  struct AppPDU <: PDU
+  struct AppPDU <: AbstractPDU
     hdrlen::UInt8
     hdr::Union{Header_v1,Header_v2}
     payload::Vector{UInt8}
@@ -510,7 +510,7 @@ end
   AppPDU(hdr::Header_v1, payload) = AppPDU(9, hdr, payload)
   AppPDU(hdr::Header_v2, payload) = AppPDU(18, hdr, payload)
 
-  function ProtocolDataUnits.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
+  function PDU.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
     info.get(:hdrlen) == 18 && return Header_v2
     Header_v1
   end
@@ -531,7 +531,7 @@ end
   @test pdu.hdr isa Header_v2
   @test pdu == pdu2
 
-  struct ParamAppPDU{T} <: PDU
+  struct ParamAppPDU{T} <: AbstractPDU
     hdrlen::UInt8
     hdr::T
     payload::Vector{UInt8}
@@ -540,7 +540,7 @@ end
   ParamAppPDU(hdr::Header_v1, payload) = ParamAppPDU{Header_v1}(9, hdr, payload)
   ParamAppPDU(hdr::Header_v2, payload) = ParamAppPDU{Header_v2}(18, hdr, payload)
 
-  function ProtocolDataUnits.fieldtype(::Type{<:ParamAppPDU}, ::Val{:hdr}, info)
+  function PDU.fieldtype(::Type{<:ParamAppPDU}, ::Val{:hdr}, info)
     info.get(:hdrlen) == 18 && return Header_v2
     Header_v1
   end
@@ -554,7 +554,7 @@ end
   @test pdu.hdr isa Header_v1
   @test pdu == pdu2
 
-  struct App2PDU <: PDU
+  struct App2PDU <: AbstractPDU
     hdrlen::UInt8
     hdr::Union{Header_v1,Header_v2,Nothing}
     payload::Vector{UInt8}
@@ -567,7 +567,7 @@ end
     App2PDU(hdrlen, hdr, payload)
   end
 
-  function ProtocolDataUnits.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
+  function PDU.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
     info.get(:hdrlen) == 9 && return Header_v1
     info.get(:hdrlen) == 18 && return Header_v2
     Nothing

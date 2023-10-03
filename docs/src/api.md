@@ -1,14 +1,14 @@
 # API Reference
 
 ```@docs
-ProtocolDataUnits.PDU
+ProtocolDataUnits.AbstractPDU
 ProtocolDataUnits.byteorder
-Base.length(::Type{<:PDU}, ::Val{Symbol}, ProtocolDataUnits.PDUInfo)
+Base.length(::Type{<:AbstractPDU}, ::Val{Symbol}, ProtocolDataUnits.PDUInfo)
 ProtocolDataUnits.fieldtype
 ProtocolDataUnits.PDUInfo
-Base.read(io::IO, ::Type{<:PDU})
-Base.write(io::IO, ::PDU)
-Base.Vector{UInt8}(::PDU)
+Base.read(io::IO, ::Type{<:AbstractPDU})
+Base.write(io::IO, ::AbstractPDU)
+Base.Vector{UInt8}(::AbstractPDU)
 ProtocolDataUnits.preencode
 ProtocolDataUnits.postdecode
 ```

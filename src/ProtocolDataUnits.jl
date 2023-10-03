@@ -1,13 +1,15 @@
 module ProtocolDataUnits
 
-export PDU, BIG_ENDIAN, LITTLE_ENDIAN
+export AbstractPDU, PDU, BIG_ENDIAN, LITTLE_ENDIAN
+
+const PDU = ProtocolDataUnits
 
 ## data types
 
 """
 Parent data type for all PDUs.
 """
-abstract type PDU end
+abstract type AbstractPDU end
 
 """
 PDU information with fields:
@@ -21,13 +23,13 @@ struct PDUInfo{T}
 end
 
 # PDU equality is defined as equality of all fields
-function Base.:(==)(a::T, b::T) where T <: PDU
+function Base.:(==)(a::T, b::T) where T <: AbstractPDU
   flds = fieldnames(T)
   getfield.(Ref(a), flds) == getfield.(Ref(b), flds)
 end
 
 # pretty printing of PDUs
-function Base.show(io::IO, pdu::T) where T <: PDU
+function Base.show(io::IO, pdu::T) where T <: AbstractPDU
   print(io, "$(T) « ")
   first = true
   for f ∈ fieldnames(T)
@@ -53,10 +55,10 @@ order, define a method for this function.
 
 # Example:
 ```julia
-ProtocolDataUnits.byteorder(::Type{MyPDU}) = LITTLE_ENDIAN
+PDU.byteorder(::Type{MyPDU}) = LITTLE_ENDIAN
 ```
 """
-byteorder(::Type{<:PDU}) = BIG_ENDIAN
+byteorder(::Type{<:AbstractPDU}) = BIG_ENDIAN
 
 """
     byteorder(::Type{T}, ::Val{s})
@@ -66,10 +68,10 @@ order as the PDU. To change byte order, define a method for this function.
 
 # Example:
 ```julia
-ProtocolDataUnits.byteorder(::Type{MyPDU}, ::Val{:myfield}) = LITTLE_ENDIAN
+PDU.byteorder(::Type{MyPDU}, ::Val{:myfield}) = LITTLE_ENDIAN
 ```
 """
-byteorder(T::Type{<:PDU}, fld) = byteorder(T)
+byteorder(T::Type{<:AbstractPDU}, fld) = byteorder(T)
 
 """
     length(::Type{T}, ::Val{s}, info::PDUInfo)
@@ -88,7 +90,7 @@ Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.length - 4
 Base.length(::Type{MyPDU}, ::Val{:x}, info) = info.get(:n)
 ```
 """
-Base.length(T::Type{<:PDU}, V::Val, info) = nothing
+Base.length(T::Type{<:AbstractPDU}, V::Val, info) = nothing
 
 """
     fieldtype(::Type{T}, ::Val{s}, info::PDUInfo)
@@ -100,15 +102,15 @@ define a method for this function.
 # Example:
 ```julia
 # field x::Union{Int32,Int64} is Int32 if xtype is 4, Int64 otherwise
-ProtocolDataUnits.fieldtype(::Type{MyPDU}, ::Val{:x}, info) = info.get(:xtype) == 4 ? Int32 : Int64
+PDU.fieldtype(::Type{MyPDU}, ::Val{:x}, info) = info.get(:xtype) == 4 ? Int32 : Int64
 ```
 """
-fieldtype(T::Type{<:PDU}, ::Val{V}, info) where V = Base.fieldtype(T, V)
+fieldtype(T::Type{<:AbstractPDU}, ::Val{V}, info) where V = Base.fieldtype(T, V)
 
 ## hooks
 
 """
-    preencode(pdu::PDU)
+    preencode(pdu::AbstractPDU)
 
 Pre-encode hook. This function is called before encoding a PDU into a vector
 of bytes. It may return a new PDU, which is then encoded instead of the original PDU.
@@ -119,17 +121,17 @@ The pre-encode hook should not change the type of the PDU.
 using Accessors, CRC32
 
 # assumes MyPDU has field crc::UInt32 as the last field
-function ProtocolDataUnits.preencode(pdu::MyPDU)
+function PDU.preencode(pdu::MyPDU)
   bytes = Vector{UInt8}(pdu; hooks=false)
   crc = crc32(bytes[1:end-4])
   @set pdu.crc = crc
 end
 ```
 """
-preencode(pdu::PDU) = pdu
+preencode(pdu::AbstractPDU) = pdu
 
 """
-    postdecode(pdu::PDU)
+    postdecode(pdu::AbstractPDU)
 
 Post-decode hook. This function is called after decoding a PDU from a vector
 of bytes. It may return a new PDU, which is then returned instead of the original PDU.
@@ -141,24 +143,24 @@ may also be used to validate the PDU, and throw an error if the PDU is invalid.
 using CRC32
 
 # assumes MyPDU has field crc::UInt32 as the last field
-function ProtocolDataUnits.postdecode(pdu::MyPDU)
+function PDU.postdecode(pdu::MyPDU)
   bytes = Vector{UInt8}(pdu; hooks=false)
   pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
   pdu
 end
 ```
 """
-postdecode(pdu::PDU) = pdu
+postdecode(pdu::AbstractPDU) = pdu
 
 ## API
 
 """
-    Vector{UInt8}(pdu::PDU; hooks=true)
+    Vector{UInt8}(pdu::AbstractPDU; hooks=true)
 
 Encodes a PDU into a vector of bytes. If `hooks` is `true`, the pre-encode hook
 is called before encoding the PDU.
 """
-function Vector{UInt8}(pdu::PDU; hooks=true)
+function Vector{UInt8}(pdu::AbstractPDU; hooks=true)
   io = IOBuffer()
   try
     write(io, pdu; hooks)
@@ -169,12 +171,12 @@ function Vector{UInt8}(pdu::PDU; hooks=true)
 end
 
 """
-    write(io::IO, pdu::PDU; hooks=true)
+    write(io::IO, pdu::AbstractPDU; hooks=true)
 
 Encodes a PDU into a vector of bytes written to stream `io`. If `hooks` is `true`,
 the pre-encode hook is called before encoding the PDU.
 """
-function Base.write(io::IO, pdu::T; hooks=true) where {T<:PDU}
+function Base.write(io::IO, pdu::T; hooks=true) where {T<:AbstractPDU}
   pdu = hooks ? preencode(pdu) : pdu
   info = PDUInfo(missing, s -> getfield(pdu, s))
   for f ∈ fieldnames(T)
@@ -205,12 +207,12 @@ function Base.write(io::IO, pdu::T; hooks=true) where {T<:PDU}
 end
 
 """
-    (T::Type{<:PDU})(buf::Vector{UInt8}; hooks=true)
+    (T::Type{<:AbstractPDU})(buf::Vector{UInt8}; hooks=true)
 
 Decodes a vector of bytes to give a PDU. If `hooks` is `true`, the post-decode hook
 is called after decoding the PDU.
 """
-function (T::Type{<:PDU})(buf::Vector{UInt8}; hooks=true)
+function (T::Type{<:AbstractPDU})(buf::Vector{UInt8}; hooks=true)
   io = IOBuffer(buf)
   try
     read(io, T; nbytes=length(buf))
@@ -220,14 +222,14 @@ function (T::Type{<:PDU})(buf::Vector{UInt8}; hooks=true)
 end
 
 """
-    read(io::IO, T::PDU; hooks=true)
-    read(io::IO, T::PDU; nbytes, hooks=true)
+    read(io::IO, T::AbstractPDU; hooks=true)
+    read(io::IO, T::AbstractPDU; nbytes, hooks=true)
 
 Decodes a vector of bytes from stream `io` to give a PDU. If `nbytes` is specified,
 the PDU is assumed to be of length `nbytes` bytes. If `hooks` is `true`, the
 post-decode hook is called after decoding the PDU.
 """
-function Base.read(io::IO, T::Type{<:PDU}; nbytes=missing, hooks=true)
+function Base.read(io::IO, T::Type{<:AbstractPDU}; nbytes=missing, hooks=true)
   data = Pair{Symbol,Any}[]
   info = PDUInfo(nbytes, s -> lookup(data, s))
   for f ∈ fieldnames(T)

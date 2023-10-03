@@ -15,7 +15,7 @@ The usage of the package is best illustrated with a simple example:
 using ProtocolDataUnits
 
 # define PDU format
-Base.@kwdef struct EthernetFrame <: PDU
+Base.@kwdef struct EthernetFrame <: AbstractPDU
   dstaddr::NTuple{6,UInt8}    # fixed length
   srcaddr::NTuple{6,UInt8}    # fixed length
   ethtype::UInt16             # fixed length
@@ -83,7 +83,7 @@ Usage is best illustrated through a series of examples.
 
 Lets define a simple PDU where all field sizes are known:
 ```julia
-struct MySimplePDU <: PDU
+struct MySimplePDU <: AbstractPDU
   a::Int16
   b::UInt8
   c::UInt8
@@ -102,7 +102,7 @@ This yields `bytes = [0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00
 
 We can change the byte ordering for the PDU to little-endian:
 ```julia
-ProtocolDataUnits.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN
+PDU.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN
 ```
 
 Now:
@@ -121,7 +121,7 @@ and we can verify that the recovered PDU has the same contents as the original: 
 
 We can define a slightly more complex PDU containing strings of potentially unknown length:
 ```julia
-struct MyLessSimplePDU <: PDU
+struct MyLessSimplePDU <: AbstractPDU
   a::Int16
   b::String
 end
@@ -204,7 +204,7 @@ pdu2 = MyLessSimplePDU(bytes)
 
 Variable length vector fields work exactly in the same way, with length being defined as the number of elements in the vector (not number of bytes):
 ```julia
-struct MyVectorPDU <: PDU
+struct MyVectorPDU <: AbstractPDU
   a::Int16
   b::Vector{Float64}
 end
@@ -223,12 +223,12 @@ pdu2 = MyVectorPDU(bytes)
 
 We can even nest PDUs:
 ```julia
-struct InnerPDU <: PDU
+struct InnerPDU <: AbstractPDU
   a::Int8
   b::Float32
 end
 
-struct OuterPDU <: PDU
+struct OuterPDU <: AbstractPDU
   x::Int16
   y::InnerPDU
   z::Int8
@@ -249,12 +249,12 @@ pdu2 = OuterPDU(bytes)
 
 We can infer sizes of variable length fields in nested PDUs too:
 ```julia
-struct InnerPDU2 <: PDU
+struct InnerPDU2 <: AbstractPDU
   a::Int8
   b::String
 end
 
-struct OuterPDU2 <: PDU
+struct OuterPDU2 <: AbstractPDU
   x::Int16
   y::InnerPDU2
   z::Int8
@@ -278,7 +278,7 @@ pdu2 = OuterPDU2(bytes)
 
 A PDU may contain a field that is dependent on another field. We saw in an example above, where `MyVectorPDU` has field `a` which specified the number of elements in field `b`. A good way to ensure consistency is to populate dependent fields at construction:
 ```julia
-struct MyVectorPDU2 <: PDU
+struct MyVectorPDU2 <: AbstractPDU
   a::Int16
   b::Vector{Float64}
 end
@@ -293,7 +293,7 @@ However, since vector `b` can be mutated after construction, the consistency at 
 ```julia
 using Accessors
 
-function ProtocolDataUnits.preencode(pdu::MyVectorPDU2)
+function PDU.preencode(pdu::MyVectorPDU2)
   @set pdu.a = length(pdu.b)
 end
 ```
@@ -316,13 +316,13 @@ Sometimes we may want to pre-process PDUs to compute CRC, or post-process them t
 ```julia
 using CRC32
 
-function ProtocolDataUnits.preencode(pdu::EthernetFrame)
+function PDU.preencode(pdu::EthernetFrame)
   bytes = Vector{UInt8}(pdu; hooks=false)   # encode without computing CRC
   crc = crc32(bytes[1:end-4])               # compute CRC
   @set pdu.crc = crc                        # make a new frame with CRC filled in
 end
 
-function ProtocolDataUnits.postdecode(pdu::EthernetFrame)
+function PDU.postdecode(pdu::EthernetFrame)
   bytes = Vector{UInt8}(pdu; hooks=false)   # re-encode the frame for CRC computation
   pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException("CRC check failed"))
   pdu                                       # return unaltered pdu if CRC OK
@@ -349,19 +349,19 @@ EthernetFrame(buf)      # should throw an exception
 
 Consider a PDU with the first byte specifying the header length, which is followed by a header and then a payload. Two versions of headers may be used, depending on the application needs, with the header length allowing the receiver to differentiate between the two. We can define the PDU with a header field that uses a union type:
 ```julia
-struct Header_v1 <: PDU
+struct Header_v1 <: AbstractPDU
   src::UInt32
   dst::UInt32
   port::UInt8
 end
 
-struct Header_v2 <: PDU
+struct Header_v2 <: AbstractPDU
   src::UInt64
   dst::UInt64
   port::UInt16
 end
 
-struct AppPDU <: PDU
+struct AppPDU <: AbstractPDU
   hdrlen::UInt8
   hdr::Union{Header_v1,Header_v2}
   payload::Vector{UInt8}
@@ -372,7 +372,7 @@ AppPDU(hdr::Header_v1, payload) = AppPDU(9, hdr, payload)
 AppPDU(hdr::Header_v2, payload) = AppPDU(18, hdr, payload)
 
 # hdr is v2 if hdrlen field matches it's size, otherwise default to v1
-function ProtocolDataUnits.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
+function PDU.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
   info.get(:hdrlen) == 18 && return Header_v2
   Header_v1
 end
@@ -404,7 +404,7 @@ pdu2 = AppPDU(bytes)
 
 For type stability, it is often desirable not to use a union type as a field in the `struct`, but instead use a parametrized `struct`. We support parametrized PDUs too:
 ```julia
-struct ParamAppPDU{T} <: PDU
+struct ParamAppPDU{T} <: AbstractPDU
   hdrlen::UInt8
   hdr::T
   payload::Vector{UInt8}
@@ -415,7 +415,7 @@ ParamAppPDU(hdr::Header_v1, payload) = ParamAppPDU{Header_v1}(9, hdr, payload)
 ParamAppPDU(hdr::Header_v2, payload) = ParamAppPDU{Header_v2}(18, hdr, payload)
 
 # hdr is v2 if hdrlen field matches it's size, otherwise default to v1
-function ProtocolDataUnits.fieldtype(::Type{<:ParamAppPDU}, ::Val{:hdr}, info)
+function PDU.fieldtype(::Type{<:ParamAppPDU}, ::Val{:hdr}, info)
   info.get(:hdrlen) == 18 && return Header_v2
   Header_v1
 end
@@ -435,7 +435,7 @@ pdu2 = ParamAppPDU(bytes)
 
 Extending the idea of union fields, we can define PDUs with optional fields:
 ```julia
-struct App2PDU <: PDU
+struct App2PDU <: AbstractPDU
   hdrlen::UInt8
   hdr::Union{Header_v1,Header_v2,Nothing}
   payload::Vector{UInt8}
@@ -450,7 +450,7 @@ function App2PDU(; hdr=nothing, payload=UInt8[])
 end
 
 # hdr is v1, v2 or nothing, depending on hdrlen
-function ProtocolDataUnits.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
+function PDU.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
   info.get(:hdrlen) == 9 && return Header_v1
   info.get(:hdrlen) == 18 && return Header_v2
   Nothing
