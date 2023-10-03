@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>ProtocolDataUnits.jl · ProtocolDataUnits.jl</title><meta name="title" content="ProtocolDataUnits.jl · ProtocolDataUnits.jl"/><meta property="og:title" content="ProtocolDataUnits.jl · ProtocolDataUnits.jl"/><meta property="twitter:title" content="ProtocolDataUnits.jl · ProtocolDataUnits.jl"/><meta name="description" content="Documentation for ProtocolDataUnits.jl."/><meta property="og:description" content="Documentation for ProtocolDataUnits.jl."/><meta property="twitter:description" content="Documentation for ProtocolDataUnits.jl."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">ProtocolDataUnits.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href="index.html">ProtocolDataUnits.jl</a><ul class="internal"><li><a class="tocitem" href="#Getting-started"><span>Getting started</span></a></li><li><a class="tocitem" href="#Basic-usage"><span>Basic usage</span></a></li><li><a class="tocitem" href="#PDUs-with-fixed-length-fields"><span>PDUs with fixed length fields</span></a></li><li><a class="tocitem" href="#PDUs-with-variable-length-fields"><span>PDUs with variable length fields</span></a></li><li><a class="tocitem" href="#PDUs-with-nested-PDUs"><span>PDUs with nested PDUs</span></a></li><li><a class="tocitem" href="#PDUs-with-dependent-fields"><span>PDUs with dependent fields</span></a></li><li><a class="tocitem" href="#PDUs-with-CRCs"><span>PDUs with CRCs</span></a></li><li><a class="tocitem" href="#PDUs-with-union-types"><span>PDUs with union types</span></a></li><li><a class="tocitem" href="#PDUs-as-parametrized-types"><span>PDUs as parametrized types</span></a></li><li><a class="tocitem" href="#PDUs-with-optional-fields"><span>PDUs with optional fields</span></a></li></ul></li><li><a class="tocitem" href="api.html">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="index.html">ProtocolDataUnits.jl</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="index.html">ProtocolDataUnits.jl</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/org-arl/ProtocolDataUnits.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/org-arl/ProtocolDataUnits.jl/blob/master/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="ProtocolDataUnits.jl"><a class="docs-heading-anchor" href="#ProtocolDataUnits.jl">ProtocolDataUnits.jl</a><a id="ProtocolDataUnits.jl-1"></a><a class="docs-heading-anchor-permalink" href="#ProtocolDataUnits.jl" title="Permalink"></a></h1><p><strong>Encoders and decoders for Protocol Data Units (PDUs)</strong></p><p><a href="https://en.wikipedia.org/wiki/Protocol_data_unit">PDUs</a> encode information as byte streams that can be transmitted across a network or stored. <code>ProtocolDataUnits.jl</code> simplifies the process of encoding and decoding information as PDUs in a declarative way.</p><h2 id="Getting-started"><a class="docs-heading-anchor" href="#Getting-started">Getting started</a><a id="Getting-started-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-started" title="Permalink"></a></h2><p>The usage of the package is best illustrated with a simple example:</p><pre><code class="language-julia hljs">using ProtocolDataUnits
 
 # define PDU format
-Base.@kwdef struct EthernetFrame &lt;: PDU
+Base.@kwdef struct EthernetFrame &lt;: AbstractPDU
   dstaddr::NTuple{6,UInt8}    # fixed length
   srcaddr::NTuple{6,UInt8}    # fixed length
   ethtype::UInt16             # fixed length
@@ -22,15 +22,15 @@ frame = EthernetFrame(
 )
 
 # convert to a byte array
-bytes = Vector{UInt8}(frame)
+bytes = PDU.encode(frame)
 
 # convert back to Ethernet frame
-decoded = EthernetFrame(bytes)
+decoded = PDU.decode(bytes, EthernetFrame)
 
 # check that they are the same
-@assert frame == decoded</code></pre><p>The package can do much more, including nested PDUs, wire-encoding, CRC computation, etc.</p><h2 id="Basic-usage"><a class="docs-heading-anchor" href="#Basic-usage">Basic usage</a><a id="Basic-usage-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-usage" title="Permalink"></a></h2><p>A PDU is declared as a <code>struct</code> subtyped from <code>PDU</code>. It may contain fields of the following types:</p><ul><li><code>Number</code> types (various sized integers and floats)</li><li><code>NTuple</code> of <code>Number</code> types</li><li><code>AbstractVector</code> of <code>Number</code> types</li><li><code>AbstractString</code></li><li>Other <code>PDU</code>s</li><li><code>Nothing</code></li><li>Any other data type <code>T</code> that supports <code>read(::IO, ::Type{T})</code> and <code>write(::IO, ::T)</code></li><li><code>Union</code> of any of the above types</li></ul><p>The size (in bytes) of numeric types, tuples of numeric types and <code>nothing</code> is known. However, vectors, strings and other data types may have variable sizes. If the size is unknown, a wire-encoded size/length field is implicitly added to the PDU representation when encoding it, and is used during decoding to infer size/length. Alternatively, the size/length of specific fields may be declared by defining a <code>length()</code> for specific fields in a PDU.</p><p>By default, network byte order (big endian) is used for multi-byte numeric values. That may be overridden for the PDU or for specific fields by declaring a <a href="api.html#ProtocolDataUnits.byteorder"><code>byteorder()</code></a>.</p><p>When a field is of a union type, a <code>fieldtype()</code> definition must be available to resolve which concrete type to expect when decoding a PDU from bytes.</p><p>PDUs are encoded into bytes in one of two ways:</p><pre><code class="language-julia hljs">bytes = Vector{UInt8}(pdu)  # returns a vector of bytes
-write(io, pdu)              # writes bytes to an IOStream</code></pre><p>PDUs are decoded from bytes in one of two ways:</p><pre><code class="language-julia hljs">pdu = MyPDU(bytes)          # creates a MyPDU from bytes
-pdu = read(io, MyPDU)       # creates a MyPDU by reading bytes from an IOStream</code></pre><p>Usage is best illustrated through a series of examples.</p><h2 id="PDUs-with-fixed-length-fields"><a class="docs-heading-anchor" href="#PDUs-with-fixed-length-fields">PDUs with fixed length fields</a><a id="PDUs-with-fixed-length-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-fixed-length-fields" title="Permalink"></a></h2><p>Lets define a simple PDU where all field sizes are known:</p><pre><code class="language-julia hljs">struct MySimplePDU &lt;: PDU
+@assert frame == decoded</code></pre><p>The package can do much more, including nested PDUs, wire-encoding, CRC computation, etc.</p><h2 id="Basic-usage"><a class="docs-heading-anchor" href="#Basic-usage">Basic usage</a><a id="Basic-usage-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-usage" title="Permalink"></a></h2><p>A PDU is declared as a <code>struct</code> subtyped from <code>PDU</code>. It may contain fields of the following types:</p><ul><li><code>Number</code> types (various sized integers and floats)</li><li><code>NTuple</code> of <code>Number</code> types</li><li><code>AbstractVector</code> of <code>Number</code> types</li><li><code>AbstractString</code></li><li>Other <code>PDU</code>s</li><li><code>Nothing</code></li><li>Any other data type <code>T</code> that supports <code>read(::IO, ::Type{T})</code> and <code>write(::IO, ::T)</code></li><li><code>Union</code> of any of the above types</li></ul><p>The size (in bytes) of numeric types, tuples of numeric types and <code>nothing</code> is known. However, vectors, strings and other data types may have variable sizes. If the size is unknown, a wire-encoded size/length field is implicitly added to the PDU representation when encoding it, and is used during decoding to infer size/length. Alternatively, the size/length of specific fields may be declared by defining a <code>length()</code> for specific fields in a PDU.</p><p>By default, network byte order (big endian) is used for multi-byte numeric values. That may be overridden for the PDU or for specific fields by declaring a <a href="api.html#ProtocolDataUnits.byteorder"><code>byteorder()</code></a>.</p><p>When a field is of a union type, a <code>fieldtype()</code> definition must be available to resolve which concrete type to expect when decoding a PDU from bytes.</p><p>PDUs are encoded into bytes in one of two ways:</p><pre><code class="language-julia hljs">bytes = PDU.encode(pdu)         # returns a vector of bytes
+write(io, pdu)                  # writes bytes to an IOStream</code></pre><p>PDUs are decoded from bytes in one of two ways:</p><pre><code class="language-julia hljs">pdu = PDU.decode(bytes, MyPDU)  # creates a MyPDU from bytes
+pdu = read(io, MyPDU)           # creates a MyPDU by reading bytes from an IOStream</code></pre><p>Usage is best illustrated through a series of examples.</p><h2 id="PDUs-with-fixed-length-fields"><a class="docs-heading-anchor" href="#PDUs-with-fixed-length-fields">PDUs with fixed length fields</a><a id="PDUs-with-fixed-length-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-fixed-length-fields" title="Permalink"></a></h2><p>Lets define a simple PDU where all field sizes are known:</p><pre><code class="language-julia hljs">struct MySimplePDU &lt;: AbstractPDU
   a::Int16
   b::UInt8
   c::UInt8
@@ -39,83 +39,74 @@ pdu = read(io, MyPDU)       # creates a MyPDU by reading bytes from an IOStream<
   f::Float64
 end
 
-pdu = MySimplePDU(1, 2, 3, (4,5), 6f0, 7.0)</code></pre><p>and then encode it into bytes:</p><pre><code class="language-julia hljs">bytes = Vector{UInt8}(pdu)</code></pre><p>This yields <code>bytes = [0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x05, 0x40, 0xc0, 0x00, 0x00, 0x40, 0x1c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]</code>.</p><p>We can change the byte ordering for the PDU to little-endian:</p><pre><code class="language-julia hljs">ProtocolDataUnits.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN</code></pre><p>Now:</p><pre><code class="language-julia hljs">bytes = Vector{UInt8}(pdu)</code></pre><p>yields <code>[0x01, 0x00, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x40]</code>.</p><p>The bytes can be converted back to a PDU:</p><pre><code class="language-julia hljs">pdu2 = MySimplePDU(bytes)</code></pre><p>and we can verify that the recovered PDU has the same contents as the original: <code>@assert pdu == pdu2</code>.</p><h2 id="PDUs-with-variable-length-fields"><a class="docs-heading-anchor" href="#PDUs-with-variable-length-fields">PDUs with variable length fields</a><a id="PDUs-with-variable-length-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-variable-length-fields" title="Permalink"></a></h2><p>We can define a slightly more complex PDU containing strings of potentially unknown length:</p><pre><code class="language-julia hljs">struct MyLessSimplePDU &lt;: PDU
+pdu = MySimplePDU(1, 2, 3, (4,5), 6f0, 7.0)</code></pre><p>and then encode it into bytes:</p><pre><code class="language-julia hljs">bytes = PDU.encode(pdu)</code></pre><p>This yields <code>bytes = [0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x05, 0x40, 0xc0, 0x00, 0x00, 0x40, 0x1c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]</code>.</p><p>We can change the byte ordering for the PDU to little-endian:</p><pre><code class="language-julia hljs">PDU.byteorder(::Type{MySimplePDU}) = LITTLE_ENDIAN</code></pre><p>Now:</p><pre><code class="language-julia hljs">bytes = PDU.encode(pdu)</code></pre><p>yields <code>[0x01, 0x00, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x40]</code>.</p><p>The bytes can be converted back to a PDU:</p><pre><code class="language-julia hljs">pdu2 = PDU.decode(bytes, MySimplePDU)</code></pre><p>and we can verify that the recovered PDU has the same contents as the original: <code>@assert pdu == pdu2</code>.</p><h2 id="PDUs-with-variable-length-fields"><a class="docs-heading-anchor" href="#PDUs-with-variable-length-fields">PDUs with variable length fields</a><a id="PDUs-with-variable-length-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-variable-length-fields" title="Permalink"></a></h2><p>We can define a slightly more complex PDU containing strings of potentially unknown length:</p><pre><code class="language-julia hljs">struct MyLessSimplePDU &lt;: AbstractPDU
   a::Int16
   b::String
 end
 
-pdu = MyLessSimplePDU(1, &quot;hello world!&quot;)</code></pre><p>We can convert the PDU to bytes and back:</p><pre><code class="language-julia hljs">bytes = Vector{UInt8}(pdu)
-pdu2 = MyLessSimplePDU(bytes)
-@assert pdu == pdu2</code></pre><p>The PDU will have a size of 15 bytes (2 bytes for <code>a</code>, 12 bytes for <code>b = &quot;hello world!&quot;</code>, and 1 byte to store the length of <code>b</code>). The length of the string is encoded as a variable length number using wire-encoding.</p><p>If we knew the maximum length of the string beforehand (say 14 bytes), and wanted a fixed length PDU (14+2=16 bytes), we could declare the length:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 14
+pdu = MyLessSimplePDU(1, &quot;hello world!&quot;)</code></pre><p>We can convert the PDU to bytes and back:</p><pre><code class="language-julia hljs">bytes = PDU.encode(pdu)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
+@assert pdu == pdu2</code></pre><p>The PDU will have a size of 15 bytes (2 bytes for <code>a</code>, 12 bytes for <code>b = &quot;hello world!&quot;</code>, and 1 byte to store the length of <code>b</code>). The length of the string is encoded as a variable length number using wire-encoding.</p><p>If we knew the maximum length of the string beforehand (say 14 bytes), and wanted a fixed length PDU (14+2=16 bytes), we could declare the length:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = PadTo(14)
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 16
 
-pdu2 = MyLessSimplePDU(bytes)
-@assert pdu == pdu2</code></pre><p>Since the string <code>b = &quot;hello world!&quot;</code> occupies only 12 bytes, it is padded with two null (<code>&#39;\0</code>) bytes. If the length of <code>b</code> was larger than the allocated length, the string would be truncated:</p><pre><code class="language-julia hljs">pdu = MyLessSimplePDU(1, &quot;hello world! how are you?&quot;)
-
-bytes = Vector{UInt8}(pdu)
-@assert length(bytes) == 16
-
-pdu2 = MyLessSimplePDU(bytes)
-@assert pdu2.b == &quot;hello world! h&quot;</code></pre><p>We could also support variable length strings without having to store the length in the PDU if we knew the size of the PDU while decoding. To do so, we need to declare that the length of the string must be 2 bytes less than the length of the whole PDU:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = info.length - 2</code></pre><p>The <code>info</code> object provides information on the PDU being encoded or decoded. <code>info.length</code> tells us the size of the PDU in bytes, if known (otherwise it is <code>missing</code>). Now, we can encode arbitrary length strings in our PDU without the overhead of storing the length of the string:</p><pre><code class="language-julia hljs">bytes = Vector{UInt8}(pdu)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
+@assert pdu == pdu2</code></pre><p>Since the string <code>b = &quot;hello world!&quot;</code> occupies only 12 bytes, it is padded with two null (<code>&#39;\0</code>) bytes. If the length of <code>b</code> was larger than the allocated length, the encoding will throw an exception.</p><p>We could also support variable length strings without having to store the length in the PDU if we knew the size of the PDU while decoding. To do so, we need to declare that the length of the string must be 2 bytes less than the length of the whole PDU:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = info.length - 2</code></pre><p>The <code>info</code> object provides information on the PDU being encoded or decoded. <code>info.length</code> tells us the size of the PDU in bytes, if known (otherwise it is <code>missing</code>). Now, we can encode arbitrary length strings in our PDU without the overhead of storing the length of the string:</p><pre><code class="language-julia hljs">bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + length(&quot;hello world! how are you?&quot;)
 
-pdu2 = MyLessSimplePDU(bytes)
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
 @assert pdu2.b == &quot;hello world! how are you?&quot;
 @assert pdu == pdu2</code></pre><p>We can also define field lengths that depend on the value of preceding fields. For example, if we happened to know that the length of string <code>b</code> is always <code>2a</code>, we can declare:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = 2 * info.get(:a)</code></pre><p>Here <code>info.get()</code> provides us access to fields that are decoded earlier in the byte stream.</p><pre><code class="language-julia hljs">pdu = MyLessSimplePDU(6, &quot;hello world!&quot;)
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 2*6
 
-pdu2 = MyLessSimplePDU(bytes)
-@assert pdu2.b == &quot;hello world!&quot;</code></pre><p>Had we set an <code>a</code> that is too small or big, the string would have been truncated or null padded:</p><pre><code class="language-julia hljs"># string is null padded to 16 bytes
-pdu = MyLessSimplePDU(8, &quot;hello world!&quot;)
-bytes = Vector{UInt8}(pdu)
-@assert length(bytes) == 2 + 2*8
-pdu2 = MyLessSimplePDU(bytes)
-@assert pdu2.b == &quot;hello world!&quot;
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
+@assert pdu2.b == &quot;hello world!&quot;</code></pre><p>Had we set an <code>a</code> that is too small or big, we would get an exception complaining about the length. If we wanted the string to be null padded automatically, we could specify that:</p><pre><code class="language-julia hljs">Base.length(::Type{MyLessSimplePDU}, ::Val{:b}, info) = PadTo(2 * info.get(:a))
 
-# string is truncated to 8 bytes
-pdu = MyLessSimplePDU(4, &quot;hello world!&quot;)
-bytes = Vector{UInt8}(pdu)
-@assert length(bytes) == 2 + 2*4
-pdu2 = MyLessSimplePDU(bytes)
-@assert pdu2.b == &quot;hello wo&quot;</code></pre><p>Variable length vector fields work exactly in the same way, with length being defined as the number of elements in the vector (not number of bytes):</p><pre><code class="language-julia hljs">struct MyVectorPDU &lt;: PDU
+# string is null padded to 16 bytes
+pdu = MyLessSimplePDU(8, &quot;hello world!&quot;)
+bytes = PDU.encode(pdu)
+@assert length(bytes) == 2 + 2*8
+pdu2 = PDU.decode(bytes, MyLessSimplePDU)
+@assert pdu2.b == &quot;hello world!&quot;</code></pre><p>Variable length vector fields work exactly in the same way, with length being defined as the number of elements in the vector (not number of bytes). However, for vectors, the default length is <code>nothing</code> (unknown), and so we need an explicit declaration to change it to wire-encoding if we want the vector length to be stored in the PDU:</p><pre><code class="language-julia hljs">struct MyVectorPDU &lt;: AbstractPDU
   a::Int16
   b::Vector{Float64}
 end
+
+Base.length(::Type{MyVectorPDU2}, ::Val{:b}, info) = WireEncoded()
 
 # vector length is in number of Float64, but info.length is in number of bytes
 Base.length(::Type{MyVectorPDU}, ::Val{:b}, info) = (info.length - 2) ÷ sizeof(Float64)
 
 pdu = MyVectorPDU(1, [1.0, 2.0, 3.0])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + 3 * sizeof(Float64)
-pdu2 = MyVectorPDU(bytes)
-@assert pdu == pdu2</code></pre><h2 id="PDUs-with-nested-PDUs"><a class="docs-heading-anchor" href="#PDUs-with-nested-PDUs">PDUs with nested PDUs</a><a id="PDUs-with-nested-PDUs-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-nested-PDUs" title="Permalink"></a></h2><p>We can even nest PDUs:</p><pre><code class="language-julia hljs">struct InnerPDU &lt;: PDU
+pdu2 = PDU.decode(bytes, MyVectorPDU)
+@assert pdu == pdu2</code></pre><h2 id="PDUs-with-nested-PDUs"><a class="docs-heading-anchor" href="#PDUs-with-nested-PDUs">PDUs with nested PDUs</a><a id="PDUs-with-nested-PDUs-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-nested-PDUs" title="Permalink"></a></h2><p>We can even nest PDUs:</p><pre><code class="language-julia hljs">struct InnerPDU &lt;: AbstractPDU
   a::Int8
   b::Float32
 end
 
-struct OuterPDU &lt;: PDU
+struct OuterPDU &lt;: AbstractPDU
   x::Int16
   y::InnerPDU
   z::Int8
 end
 
-pdu = OuterPDU(1, InnerPDU(2, 3f0), 4)</code></pre><p>and encode and decode them effortlessly:</p><pre><code class="language-julia hljs">bytes = Vector{UInt8}(pdu)
+pdu = OuterPDU(1, InnerPDU(2, 3f0), 4)</code></pre><p>and encode and decode them effortlessly:</p><pre><code class="language-julia hljs">bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + (1 + 4) + 1
 
-pdu2 = OuterPDU(bytes)
+pdu2 = PDU.decode(bytes, OuterPDU)
 
 @assert pdu2.y == pdu.y   # inner PDU matches
-@assert pdu == pdu       # so does the outer PDU2</code></pre><p>We can infer sizes of variable length fields in nested PDUs too:</p><pre><code class="language-julia hljs">struct InnerPDU2 &lt;: PDU
+@assert pdu == pdu       # so does the outer PDU2</code></pre><p>We can infer sizes of variable length fields in nested PDUs too:</p><pre><code class="language-julia hljs">struct InnerPDU2 &lt;: AbstractPDU
   a::Int8
   b::String
 end
 
-struct OuterPDU2 &lt;: PDU
+struct OuterPDU2 &lt;: AbstractPDU
   x::Int16
   y::InnerPDU2
   z::Int8
@@ -126,13 +117,13 @@ Base.length(::Type{OuterPDU2}, ::Val{:y}, info) = info.length - 3
 
 pdu = OuterPDU2(1, InnerPDU2(2, &quot;hello world!&quot;), 4)
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 2 + (1 + 12) + 1
 
-pdu2 = OuterPDU2(bytes)
+pdu2 = PDU.decode(bytes, OuterPDU2)
 
 @assert pdu2.y == pdu.y
-@assert pdu == pdu2</code></pre><h2 id="PDUs-with-dependent-fields"><a class="docs-heading-anchor" href="#PDUs-with-dependent-fields">PDUs with dependent fields</a><a id="PDUs-with-dependent-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-dependent-fields" title="Permalink"></a></h2><p>A PDU may contain a field that is dependent on another field. We saw in an example above, where <code>MyVectorPDU</code> has field <code>a</code> which specified the number of elements in field <code>b</code>. A good way to ensure consistency is to populate dependent fields at construction:</p><pre><code class="language-julia hljs">struct MyVectorPDU2 &lt;: PDU
+@assert pdu == pdu2</code></pre><h2 id="PDUs-with-dependent-fields"><a class="docs-heading-anchor" href="#PDUs-with-dependent-fields">PDUs with dependent fields</a><a id="PDUs-with-dependent-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-dependent-fields" title="Permalink"></a></h2><p>A PDU may contain a field that is dependent on another field. We saw in an example above, where <code>MyVectorPDU</code> has field <code>a</code> which specified the number of elements in field <code>b</code>. A good way to ensure consistency is to populate dependent fields at construction:</p><pre><code class="language-julia hljs">struct MyVectorPDU2 &lt;: AbstractPDU
   a::Int16
   b::Vector{Float64}
 end
@@ -142,26 +133,26 @@ MyVectorPDU2(b::Vector{Float64}) = MyVectorPDU2(length(b), b)
 pdu = MyVectorPDU2([1.0, 2.0, 3.0])
 @assert pdu.a == 3</code></pre><p>However, since vector <code>b</code> can be mutated after construction, the consistency at construction does not guarantee consistency at encoding. We could enforce consistency an encoding using a pre-encode hook:</p><pre><code class="language-julia hljs">using Accessors
 
-function ProtocolDataUnits.preencode(pdu::MyVectorPDU2)
+function PDU.preencode(pdu::MyVectorPDU2)
   @set pdu.a = length(pdu.b)
 end</code></pre><p>This will ensure that field <code>a</code> is populated correctly at time of encoding:</p><pre><code class="language-julia hljs">push!(pdu.b, 4.0)           # add 4th element to b
 @assert pdu.a == 3          # now pdu is inconsistent, since pdu.a == 3
 
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert bytes[2] == 4       # encoded bytes show 4 elements correctly
 
-pdu2 = MyVectorPDU2(bytes)
+pdu2 = PDU.decode(bytes, MyVectorPDU2)
 @assert pdu2.a == 4         # decoded pdu also shows 4 elements correctly
 @assert length(pdu2.b) == 4 # and it indeed contains 4 elements</code></pre><h2 id="PDUs-with-CRCs"><a class="docs-heading-anchor" href="#PDUs-with-CRCs">PDUs with CRCs</a><a id="PDUs-with-CRCs-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-CRCs" title="Permalink"></a></h2><p>Sometimes we may want to pre-process PDUs to compute CRC, or post-process them to modify their content or perform CRC checks. To see, how we can do this, let&#39;s go back to our example of <code>EthernetFrame</code> and define a pre-encoding hook to compute CRC, and a post-decoding hook to check the CRC:</p><pre><code class="language-julia hljs">using CRC32
 
-function ProtocolDataUnits.preencode(pdu::EthernetFrame)
-  bytes = Vector{UInt8}(pdu; hooks=false)   # encode without computing CRC
+function PDU.preencode(pdu::EthernetFrame)
+  bytes = PDU.encode(pdu; hooks=false)   # encode without computing CRC
   crc = crc32(bytes[1:end-4])               # compute CRC
   @set pdu.crc = crc                        # make a new frame with CRC filled in
 end
 
-function ProtocolDataUnits.postdecode(pdu::EthernetFrame)
-  bytes = Vector{UInt8}(pdu; hooks=false)   # re-encode the frame for CRC computation
+function PDU.postdecode(pdu::EthernetFrame)
+  bytes = PDU.encode(pdu; hooks=false)   # re-encode the frame for CRC computation
   pdu.crc == crc32(bytes[1:end-4]) || throw(ErrorException(&quot;CRC check failed&quot;))
   pdu                                       # return unaltered pdu if CRC OK
 end
@@ -173,22 +164,22 @@ frame = EthernetFrame(
   payload = [0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14]
 )
 
-buf = Vector{UInt8}(frame)
+buf = PDU.encode(frame)
 frame2 = EthernetFrame(buf)
 @assert frame.payload == frame2.payload</code></pre><p>However, if there was an error in the buffer, the CRC check would fail:</p><pre><code class="language-julia hljs">buf[5] += 1
-EthernetFrame(buf)      # should throw an exception</code></pre><h2 id="PDUs-with-union-types"><a class="docs-heading-anchor" href="#PDUs-with-union-types">PDUs with union types</a><a id="PDUs-with-union-types-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-union-types" title="Permalink"></a></h2><p>Consider a PDU with the first byte specifying the header length, which is followed by a header and then a payload. Two versions of headers may be used, depending on the application needs, with the header length allowing the receiver to differentiate between the two. We can define the PDU with a header field that uses a union type:</p><pre><code class="language-julia hljs">struct Header_v1 &lt;: PDU
+EthernetFrame(buf)      # should throw an exception</code></pre><h2 id="PDUs-with-union-types"><a class="docs-heading-anchor" href="#PDUs-with-union-types">PDUs with union types</a><a id="PDUs-with-union-types-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-union-types" title="Permalink"></a></h2><p>Consider a PDU with the first byte specifying the header length, which is followed by a header and then a payload. Two versions of headers may be used, depending on the application needs, with the header length allowing the receiver to differentiate between the two. We can define the PDU with a header field that uses a union type:</p><pre><code class="language-julia hljs">struct Header_v1 &lt;: AbstractPDU
   src::UInt32
   dst::UInt32
   port::UInt8
 end
 
-struct Header_v2 &lt;: PDU
+struct Header_v2 &lt;: AbstractPDU
   src::UInt64
   dst::UInt64
   port::UInt16
 end
 
-struct AppPDU &lt;: PDU
+struct AppPDU &lt;: AbstractPDU
   hdrlen::UInt8
   hdr::Union{Header_v1,Header_v2}
   payload::Vector{UInt8}
@@ -199,7 +190,7 @@ AppPDU(hdr::Header_v1, payload) = AppPDU(9, hdr, payload)
 AppPDU(hdr::Header_v2, payload) = AppPDU(18, hdr, payload)
 
 # hdr is v2 if hdrlen field matches it&#39;s size, otherwise default to v1
-function ProtocolDataUnits.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
+function PDU.fieldtype(::Type{AppPDU}, ::Val{:hdr}, info)
   info.get(:hdrlen) == 18 &amp;&amp; return Header_v2
   Header_v1
 end
@@ -207,19 +198,19 @@ end
 # payload length is the frame length less the header
 Base.length(::Type{AppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1</code></pre><p>We can now create either type of PDU and decode it without having a priori knowledge of the header type:</p><pre><code class="language-julia hljs"># v1 header
 pdu = AppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 13
-pdu2 = AppPDU(bytes)
+pdu2 = PDU.decode(bytes, AppPDU)
 @assert pdu.hdr isa Header_v1
 @assert pdu == pdu2
 
 # v2 header
 pdu = AppPDU(Header_v2(1, 2, 3), UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 22
-pdu2 = AppPDU(bytes)
+pdu2 = PDU.decode(bytes, AppPDU)
 @assert pdu.hdr isa Header_v2
-@assert pdu == pdu2</code></pre><h2 id="PDUs-as-parametrized-types"><a class="docs-heading-anchor" href="#PDUs-as-parametrized-types">PDUs as parametrized types</a><a id="PDUs-as-parametrized-types-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-as-parametrized-types" title="Permalink"></a></h2><p>For type stability, it is often desirable not to use a union type as a field in the <code>struct</code>, but instead use a parametrized <code>struct</code>. We support parametrized PDUs too:</p><pre><code class="language-julia hljs">struct ParamAppPDU{T} &lt;: PDU
+@assert pdu == pdu2</code></pre><h2 id="PDUs-as-parametrized-types"><a class="docs-heading-anchor" href="#PDUs-as-parametrized-types">PDUs as parametrized types</a><a id="PDUs-as-parametrized-types-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-as-parametrized-types" title="Permalink"></a></h2><p>For type stability, it is often desirable not to use a union type as a field in the <code>struct</code>, but instead use a parametrized <code>struct</code>. We support parametrized PDUs too:</p><pre><code class="language-julia hljs">struct ParamAppPDU{T} &lt;: AbstractPDU
   hdrlen::UInt8
   hdr::T
   payload::Vector{UInt8}
@@ -230,7 +221,7 @@ ParamAppPDU(hdr::Header_v1, payload) = ParamAppPDU{Header_v1}(9, hdr, payload)
 ParamAppPDU(hdr::Header_v2, payload) = ParamAppPDU{Header_v2}(18, hdr, payload)
 
 # hdr is v2 if hdrlen field matches it&#39;s size, otherwise default to v1
-function ProtocolDataUnits.fieldtype(::Type{&lt;:ParamAppPDU}, ::Val{:hdr}, info)
+function PDU.fieldtype(::Type{&lt;:ParamAppPDU}, ::Val{:hdr}, info)
   info.get(:hdrlen) == 18 &amp;&amp; return Header_v2
   Header_v1
 end
@@ -239,11 +230,11 @@ end
 Base.length(::Type{&lt;:ParamAppPDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1
 
 pdu = ParamAppPDU(Header_v1(1, 2, 3), UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 13
-pdu2 = ParamAppPDU(bytes)
+pdu2 = PDU.decode(bytes, ParamAppPDU)
 @assert pdu.hdr isa Header_v1
-@assert pdu == pdu2</code></pre><h2 id="PDUs-with-optional-fields"><a class="docs-heading-anchor" href="#PDUs-with-optional-fields">PDUs with optional fields</a><a id="PDUs-with-optional-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-optional-fields" title="Permalink"></a></h2><p>Extending the idea of union fields, we can define PDUs with optional fields:</p><pre><code class="language-julia hljs">struct App2PDU &lt;: PDU
+@assert pdu == pdu2</code></pre><h2 id="PDUs-with-optional-fields"><a class="docs-heading-anchor" href="#PDUs-with-optional-fields">PDUs with optional fields</a><a id="PDUs-with-optional-fields-1"></a><a class="docs-heading-anchor-permalink" href="#PDUs-with-optional-fields" title="Permalink"></a></h2><p>Extending the idea of union fields, we can define PDUs with optional fields:</p><pre><code class="language-julia hljs">struct App2PDU &lt;: AbstractPDU
   hdrlen::UInt8
   hdr::Union{Header_v1,Header_v2,Nothing}
   payload::Vector{UInt8}
@@ -258,7 +249,7 @@ function App2PDU(; hdr=nothing, payload=UInt8[])
 end
 
 # hdr is v1, v2 or nothing, depending on hdrlen
-function ProtocolDataUnits.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
+function PDU.fieldtype(::Type{App2PDU}, ::Val{:hdr}, info)
   info.get(:hdrlen) == 9 &amp;&amp; return Header_v1
   info.get(:hdrlen) == 18 &amp;&amp; return Header_v2
   Nothing
@@ -267,16 +258,16 @@ end
 # payload length is the frame length less the header
 Base.length(::Type{App2PDU}, ::Val{:payload}, info) = info.length - info.get(:hdrlen) - 1</code></pre><p>and work PDUs with or without headers:</p><pre><code class="language-julia hljs"># v1 header
 pdu = App2PDU(hdr=Header_v1(1, 2, 3), payload=UInt8[4, 5, 6])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 13
-pdu2 = App2PDU(bytes)
+pdu2 = PDU.decode(bytes, App2PDU)
 @assert pdu.hdr isa Header_v1
 @assert pdu == pdu2
 
 # no header
 pdu = App2PDU(payload=UInt8[4, 5, 6, 7, 8, 9])
-bytes = Vector{UInt8}(pdu)
+bytes = PDU.encode(pdu)
 @assert length(bytes) == 7
-pdu2 = App2PDU(bytes)
+pdu2 = PDU.decode(bytes, App2PDU)
 @assert pdu.hdr === nothing
-@assert pdu == pdu2</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api.html">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Saturday 30 September 2023 14:44">Saturday 30 September 2023</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@assert pdu == pdu2</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api.html">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Tuesday 3 October 2023 07:39">Tuesday 3 October 2023</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
