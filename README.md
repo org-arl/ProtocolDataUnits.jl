@@ -15,7 +15,7 @@ The usage of the package is best illustrated with a simple example:
 using ProtocolDataUnits
 
 # define PDU format
-Base.@kwdef struct EthernetFrame <: PDU
+Base.@kwdef struct EthernetFrame <: AbstractPDU
   dstaddr::NTuple{6,UInt8}    # fixed length
   srcaddr::NTuple{6,UInt8}    # fixed length
   ethtype::UInt16             # fixed length
@@ -35,10 +35,10 @@ frame = EthernetFrame(
 )
 
 # convert to a byte array
-bytes = Vector{UInt8}(frame)
+bytes = PDU.encode(frame)
 
 # convert back to Ethernet frame
-decoded = EthernetFrame(bytes)
+decoded = PDU.decode(bytes, EthernetFrame)
 
 # check that they are the same
 @assert frame == decoded
